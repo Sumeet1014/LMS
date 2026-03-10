@@ -69,7 +69,7 @@ export interface LoginCredentials {
 export interface RegisterData {
   email: string;
   password: string;
-  fullName: string;
+  full_name: string;
   role?: 'student' | 'mentor';
 }
 

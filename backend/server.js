@@ -14,7 +14,7 @@ app.use(morgan('dev'));
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:8080"],
+    origin: ["http://localhost:5173", "http://localhost:8080", "http://192.168.1.40:5173"],
     methods: ["GET", "POST"]
   }
 });
@@ -22,7 +22,7 @@ const io = new Server(server, {
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:8080"],
+  origin: ["http://localhost:5173", "http://localhost:8080", "http://192.168.1.40:5173"],
   credentials: true
 }));
 

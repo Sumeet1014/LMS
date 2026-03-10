@@ -146,7 +146,7 @@ export default function FindMentor() {
                     <span>{mentor.username || 'Anonymous Mentor'}</span>
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm">{(mentor.rating || 0).toFixed(1)}</span>
+                      <span className="text-sm">{Number(mentor.rating || 0).toFixed(1)}</span>
                     </div>
                   </CardTitle>
                   <CardDescription>Expert Mentor</CardDescription>

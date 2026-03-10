@@ -1,304 +1,394 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { sendMagicLink, signInWithGoogle } from '@/lib/auth';
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Mail, Lock, User, Chrome } from 'lucide-react';
-import { useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Tiny helpers so every input renders with stable identity across re-renders
+// ─────────────────────────────────────────────────────────────────────────────
+function Field({
+  id,
+  label,
+  type,
+  value,
+  onChange,
+  placeholder,
+  icon: Icon,
+  disabled,
+  loading,
+  autoComplete,
+}: {
+  id: string;
+  label: string;
+  type: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  icon: React.ElementType;
+  disabled: boolean;
+  loading?: boolean;
+  autoComplete?: string;
+}) {
+  const [show, setShow] = useState(false);
+  const isPassword = type === 'password';
+  const inputType = isPassword ? (show ? 'text' : 'password') : type;
+
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      <label
+        htmlFor={id}
+        style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}
+      >
+        {label}
+      </label>
+      <div style={{ position: 'relative' }}>
+        <Icon
+          style={{
+            position: 'absolute',
+            left: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '16px',
+            height: '16px',
+            color: '#888',
+            pointerEvents: 'none',
+          }}
+        />
+        <input
+          id={id}
+          type={inputType}
+          value={value}
+          onChange={(e) => {
+            console.log(`Input ${id} changed:`, e.target.value); // Debug log
+            onChange(e.target.value);
+          }}
+          placeholder={placeholder}
+          disabled={loading}
+          autoComplete={autoComplete || 'off'}
+          style={{
+            width: '100%',
+            padding: '10px 40px 10px 38px',
+            border: '1px solid #d1d5db',
+            borderRadius: '8px',
+            fontSize: '14px',
+            outline: 'none',
+            boxSizing: 'border-box',
+            background: disabled || loading ? '#f3f4f6' : '#fff',
+            color: '#111',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = '#6366f1';
+            e.currentTarget.style.boxShadow = '0 0 0 2px rgba(99,102,241,0.2)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = '#d1d5db';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShow((s) => !s)}
+            style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              color: '#888',
+            }}
+            tabIndex={-1}
+          >
+            {show ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Login Page
+// ─────────────────────────────────────────────────────────────────────────────
 export default function Login() {
+  const [tab, setTab] = useState<'signin' | 'signup'>('signin');
+
+  // Sign-in state
+  const [siEmail, setSiEmail] = useState('');
+  const [siPassword, setSiPassword] = useState('');
+
+  // Sign-up state
+  const [suName, setSuName] = useState('');
+  const [suEmail, setSuEmail] = useState('');
+  const [suPassword, setSuPassword] = useState('');
+
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [error, setError] = useState('');
+
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, login, register } = useAuth();
+  const { login, register } = useAuth();
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      toast({ title: 'Error', description: 'Please fill in all fields', variant: 'destructive' });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await login(email, password);
-      if (!result.success) {
-        throw new Error(result.error);
+  const handleSignIn = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError('');
+      console.log('Sign in attempt:', { siEmail, siPassword: '***' }); // Debug log
+      
+      if (!siEmail || !siPassword) {
+        setError('Please fill in all fields.');
+        return;
       }
-      toast({ title: 'Success', description: 'Signed in successfully!' });
-      navigate('/dashboard');
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to sign in';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password || !fullName) {
-      toast({ title: 'Error', description: 'Please fill in all fields', variant: 'destructive' });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await register(email, password, fullName, 'student');
-      if (!result.success) {
-        throw new Error(result.error);
+      setLoading(true);
+      try {
+        const result = await login(siEmail, siPassword);
+        console.log('Login result:', result); // Debug log
+        if (!result.success) throw new Error(result.error);
+        toast({ title: 'Signed in!', description: 'Welcome back.' });
+        navigate('/dashboard');
+      } catch (err: any) {
+        console.error('Login error:', err); // Debug log
+        setError(err.message || 'Failed to sign in. Please try again.');
+      } finally {
+        setLoading(false);
       }
-      toast({
-        title: 'Success',
-        description: 'Account created! You can now sign in.',
-      });
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to create account';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [siEmail, siPassword, login, navigate, toast]
+  );
 
-  const handleMagicLink = async () => {
-    if (!email) {
-      toast({ title: 'Error', description: 'Please enter your email address', variant: 'destructive' });
-      return;
-    }
+  const handleSignUp = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError('');
+      console.log('Sign up attempt:', { suName, suEmail, suPassword: '***' }); // Debug log
+      
+      if (!suName || !suEmail || !suPassword) {
+        setError('Please fill in all fields.');
+        return;
+      }
+      if (suPassword.length < 6) {
+        setError('Password must be at least 6 characters.');
+        return;
+      }
+      setLoading(true);
+      try {
+        const result = await register(suEmail, suPassword, suName, 'student');
+        console.log('Register result:', result); // Debug log
+        if (!result.success) throw new Error(result.error);
+        toast({ title: 'Account created!', description: 'You can now sign in.' });
+        // Switch to sign-in tab and prefill email
+        setSiEmail(suEmail);
+        setSiPassword('');
+        setTab('signin');
+      } catch (err: any) {
+        console.error('Register error:', err); // Debug log
+        setError(err.message || 'Failed to create account. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [suName, suEmail, suPassword, register, toast]
+  );
 
-    setLoading(true);
-    try {
-      await sendMagicLink(email);
-      toast({
-        title: 'Magic link sent!',
-        description: 'Check your email for a sign-in link.',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to send magic link',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const tabBtnStyle = (active: boolean): React.CSSProperties => ({
+    flex: 1,
+    padding: '10px',
+    border: 'none',
+    borderBottom: active ? '2px solid #6366f1' : '2px solid transparent',
+    background: 'none',
+    fontWeight: active ? 600 : 400,
+    color: active ? '#6366f1' : '#555',
+    cursor: 'pointer',
+    fontSize: '15px',
+    transition: 'color 0.2s',
+  });
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    try {
-      await signInWithGoogle();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to sign in with Google',
-        variant: 'destructive',
-      });
-      setLoading(false);
-    }
+  const submitBtnStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '11px',
+    background: loading ? '#a5b4fc' : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '15px',
+    fontWeight: 600,
+    cursor: loading ? 'not-allowed' : 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    marginTop: '4px',
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <div className="floating-bubbles" />
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg,#f0f4ff,#faf5ff)',
+        padding: '16px',
+        fontFamily: 'Inter, system-ui, sans-serif',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '420px',
+          background: '#fff',
+          borderRadius: '16px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '32px 32px 24px',
+            textAlign: 'center',
+            background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+            color: '#fff',
+          }}
+        >
+          <div style={{ fontSize: '36px', marginBottom: '4px' }}>📚</div>
+          <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 700 }}>Study Circle</h1>
+          <p style={{ margin: '6px 0 0', opacity: 0.85, fontSize: '14px' }}>
+            Peer-to-peer learning community
+          </p>
+        </div>
 
-      <Card className="w-full max-w-md card-clean">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-magic">Study Circle</CardTitle>
-          <CardDescription>
-            Join the peer-to-peer learning community
-          </CardDescription>
-        </CardHeader>
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb' }}>
+          <button style={tabBtnStyle(tab === 'signin')} onClick={() => { setTab('signin'); setError(''); }}>
+            Sign In
+          </button>
+          <button style={tabBtnStyle(tab === 'signup')} onClick={() => { setTab('signup'); setError(''); }}>
+            Sign Up
+          </button>
+        </div>
 
-        <CardContent>
-          <Tabs defaultValue="signin" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
+        {/* Form area */}
+        <div style={{ padding: '28px 32px 32px' }}>
 
-            <TabsContent value="signin" className="space-y-4">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
+          {/* Error banner */}
+          {error && (
+            <div
+              style={{
+                background: '#fef2f2',
+                border: '1px solid #fca5a5',
+                color: '#b91c1c',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                marginBottom: '16px',
+              }}
+            >
+              {error}
+            </div>
+          )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="signin-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                <Button type="submit" className="w-full btn-primary" disabled={loading}>
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Sign In
-                </Button>
-              </form>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleMagicLink}
-                  disabled={loading}
-                >
-                  <Mail className="mr-2 h-4 w-4" />
-                  Send Magic Link
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                >
-                  <Chrome className="mr-2 h-4 w-4" />
-                  Continue with Google
-                </Button>
-              </div>
-
-              <div className="text-center">
-                <Link to="/reset-password" className="text-sm text-primary hover:underline">
-                  Forgot your password?
-                </Link>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="signup" className="space-y-4">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Enter your full name"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="pl-10"
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Create a password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                <Button type="submit" className="w-full btn-primary" disabled={loading}>
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Create Account
-                </Button>
-              </form>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleGoogleSignIn}
+          {/* ── SIGN IN ── */}
+          {tab === 'signin' && (
+            <form onSubmit={handleSignIn} noValidate>
+              <Field
+                id="si-email"
+                label="Email"
+                type="email"
+                value={siEmail}
+                onChange={setSiEmail}
+                placeholder="you@example.com"
+                icon={Mail}
                 disabled={loading}
-              >
-                <Chrome className="mr-2 h-4 w-4" />
-                Continue with Google
-              </Button>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                loading={loading}
+                autoComplete="email"
+              />
+              <Field
+                id="si-password"
+                label="Password"
+                type="password"
+                value={siPassword}
+                onChange={setSiPassword}
+                placeholder="Your password"
+                icon={Lock}
+                disabled={loading}
+                loading={loading}
+                autoComplete="current-password"
+              />
+              <button type="submit" disabled={loading} style={submitBtnStyle}>
+                {loading && <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />}
+                Sign In
+              </button>
+            </form>
+          )}
+
+          {/* ── SIGN UP ── */}
+          {tab === 'signup' && (
+            <form onSubmit={handleSignUp} noValidate>
+              <Field
+                id="su-name"
+                label="Full Name"
+                type="text"
+                value={suName}
+                onChange={setSuName}
+                placeholder="Your full name"
+                icon={User}
+                disabled={loading}
+                loading={loading}
+                autoComplete="name"
+              />
+              <Field
+                id="su-email"
+                label="Email"
+                type="email"
+                value={suEmail}
+                onChange={setSuEmail}
+                placeholder="you@example.com"
+                icon={Mail}
+                disabled={loading}
+                loading={loading}
+                autoComplete="email"
+              />
+              <Field
+                id="su-password"
+                label="Password"
+                type="password"
+                value={suPassword}
+                onChange={setSuPassword}
+                placeholder="Min. 6 characters"
+                icon={Lock}
+                disabled={loading}
+                loading={loading}
+                autoComplete="new-password"
+              />
+              <button type="submit" disabled={loading} style={submitBtnStyle}>
+                {loading && <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />}
+                Create Account
+              </button>
+            </form>
+          )}
+
+          {/* Footer */}
+          <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: '#888' }}>
+            {tab === 'signin'
+              ? <>Don't have an account?{' '}
+                <button onClick={() => { setTab('signup'); setError(''); }} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontWeight: 600 }}>Sign Up</button>
+              </>
+              : <>Already have an account?{' '}
+                <button onClick={() => { setTab('signin'); setError(''); }} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontWeight: 600 }}>Sign In</button>
+              </>
+            }
+          </p>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }

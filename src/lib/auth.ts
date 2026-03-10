@@ -27,11 +27,11 @@ export interface AuthSession {
 // Sign up with email and password
 export async function signUpEmail(email: string, password: string, fullName?: string) {
   const result = await authApi.register({ email, password, fullName: fullName || '', role: 'student' });
-  
+
   if (!result.success) {
     throw new Error(result.error || 'Registration failed');
   }
-  
+
   return {
     user: result.user,
     session: { user: result.user!, token: result.token! }
@@ -41,25 +41,25 @@ export async function signUpEmail(email: string, password: string, fullName?: st
 // Sign in with email and password
 export async function signInEmail(email: string, password: string) {
   const result = await authApi.login({ email, password });
-  
+
   if (!result.success) {
     throw new Error(result.error || 'Login failed');
   }
-  
+
   return {
     user: result.user,
     session: { user: result.user!, token: result.token! }
   };
 }
 
-// Send magic link (not supported in new backend - fallback to email/password)
-export async function sendMagicLink(email: string) {
-  throw new Error('Magic links are not supported. Please use email/password authentication.');
+// Send magic link (not supported in new backend)
+export async function sendMagicLink(_email: string) {
+  throw new Error('Magic links are not supported. Please use email and password to sign in.');
 }
 
 // Sign in with Google (not implemented yet)
 export async function signInWithGoogle() {
-  throw new Error('Google authentication is not implemented yet. Please use email/password authentication.');
+  throw new Error('Google sign-in is not available yet. Please use email and password.');
 }
 
 // Reset password (not implemented yet)
@@ -73,11 +73,11 @@ export async function updatePassword(password: string) {
     currentPassword: '', // This would need to be provided by the user
     newPassword: password
   });
-  
+
   if (!result.success) {
     throw new Error(result.error || 'Password update failed');
   }
-  
+
   return result;
 }
 
@@ -90,11 +90,11 @@ export async function signOut() {
 export async function getCurrentSession() {
   const user = authApi.getUser();
   const token = authApi.getToken();
-  
+
   if (!user || !token) {
     return null;
   }
-  
+
   return { user, token: token };
 }
 
@@ -103,7 +103,7 @@ export function onAuthStateChange(callback: (session: AuthSession | null) => voi
   // For the new API, we'll use a simple polling approach
   // In a real implementation, you might want to use event emitters
   let lastToken = authApi.getToken();
-  
+
   const interval = setInterval(() => {
     const currentToken = authApi.getToken();
     if (currentToken !== lastToken) {
@@ -116,6 +116,6 @@ export function onAuthStateChange(callback: (session: AuthSession | null) => voi
       }
     }
   }, 1000);
-  
+
   return { unsubscribe: () => clearInterval(interval) };
 }

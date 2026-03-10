@@ -33,27 +33,32 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<AuthSession | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Start as false if there is no token – avoids unnecessary async render cycle
+  // when unauthenticated users land on /login.
+  const [loading, setLoading] = useState(() => authApi.isAuthenticated());
 
   // Check authentication status on mount
   useEffect(() => {
+    if (!authApi.isAuthenticated()) {
+      // No token stored – nothing to check, loading already false
+      return;
+    }
     const checkAuth = async () => {
-      if (authApi.isAuthenticated()) {
-        try {
-          const response = await authApi.getCurrentUser();
-          if (response.user) {
-            setUser(response.user);
-            const token = authApi.getToken()!;
-            setSession({ user: response.user, token });
-            // Update stored user data with fresh data
-            authApi.setAuthData(token, response.user);
-          }
-        } catch (error) {
-          console.error('Auth check failed:', error);
-          authApi.clearAuthData();
+      try {
+        const response = await authApi.getCurrentUser();
+        if (response.user) {
+          setUser(response.user);
+          const token = authApi.getToken()!;
+          setSession({ user: response.user, token });
+          // Update stored user data with fresh data
+          authApi.setAuthData(token, response.user);
         }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        authApi.clearAuthData();
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkAuth();
@@ -62,7 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const result = await authApi.login({ email, password });
-      
+
       if (result.user && result.token) {
         setUser(result.user);
         setSession({ user: result.user, token: result.token });
@@ -72,22 +77,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, error: result.error || 'Login failed' };
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.response?.data?.error || error.message || 'Login failed' 
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Login failed'
       };
     }
   };
 
   const register = async (
-    email: string, 
-    password: string, 
-    fullName: string, 
+    email: string,
+    password: string,
+    fullName: string,
     role: 'student' | 'mentor' = 'student'
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const result = await authApi.register({ email, password, fullName, role });
-      
+      const result = await authApi.register({ email, password, full_name: fullName, role });
+
       if (result.user && result.token) {
         setUser(result.user);
         setSession({ user: result.user, token: result.token });
@@ -97,9 +102,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, error: result.error || 'Registration failed' };
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.response?.data?.error || error.message || 'Registration failed' 
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Registration failed'
       };
     }
   };
@@ -119,7 +124,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = async (data: Partial<AuthUser>): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await authApi.updateProfile(data);
-      
+
       if (response.user) {
         setUser(response.user);
         const token = authApi.getToken()!;
@@ -130,22 +135,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, error: response.error || 'Profile update failed' };
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.response?.data?.error || error.message || 'Profile update failed' 
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Profile update failed'
       };
     }
   };
 
   const becomeMentor = async (data: {
-    username: string; 
-    bio: string; 
-    college_email: string; 
-    subjects: string[] 
+    username: string;
+    bio: string;
+    college_email: string;
+    subjects: string[]
   }): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await authApi.becomeMentor(data);
-      
+
       if (response.user) {
         setUser(response.user);
         const token = authApi.getToken()!;
@@ -156,9 +161,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, error: response.error || 'Failed to become mentor' };
       }
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.response?.data?.error || error.message || 'Failed to become mentor' 
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to become mentor'
       };
     }
   };

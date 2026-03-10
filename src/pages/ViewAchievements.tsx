@@ -113,7 +113,7 @@ export default function ViewAchievements() {
 
                 <div className="text-center p-4 rounded-lg bg-success/5">
                   <div className="text-3xl font-bold text-success mb-1">
-                    {profile?.rating?.toFixed(1) || '0.0'}
+                    {Number(profile?.rating || 0).toFixed(1) || '0.0'}
                   </div>
                   <div className="text-sm text-muted-foreground">Average Rating</div>
                 </div>

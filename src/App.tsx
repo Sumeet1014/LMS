@@ -10,13 +10,14 @@ import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import FindMentor from "./pages/FindMentor";
-import BecomeMentor from "./pages/BecomeMentor";
+import BecomeMentor from "./pages/BecomeMentorWorking";
 import ViewSchedule from "./pages/ViewSchedule";
 import ViewAchievements from "./pages/ViewAchievements";
 import Challenges from "./pages/Challenges";
 import Leaderboard from "./pages/Leaderboard";
 import VideoRoom from "./pages/VideoRoom";
 import CertificateViewer from "./pages/CertificateViewer";
+import TestInput from "./pages/TestInput";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -97,6 +98,7 @@ const App = () => (
               }
             />
             <Route path="/certificate/:shareToken" element={<CertificateViewer />} />
+            <Route path="/test-input" element={<TestInput />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
