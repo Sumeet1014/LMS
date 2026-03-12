@@ -246,7 +246,7 @@ class AuthController {
       }
 
       // Verify current password
-      const isValid = await require('bcrypt').compare(currentPassword, user.password);
+      const isValid = await require('bcrypt').compare(currentPassword, user.password_hash);
       if (!isValid) {
         return res.status(401).json({ error: 'Current password is incorrect' });
       }

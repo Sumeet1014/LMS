@@ -26,7 +26,15 @@ const createSessionValidation = [
     .notEmpty()
     .withMessage('Requested time is required')
     .isISO8601()
-    .withMessage('Requested time must be a valid date'),
+    .withMessage('Requested time must be a valid date')
+    .custom((value) => {
+      const requestedDate = new Date(value);
+      const now = new Date();
+      if (requestedDate <= now) {
+        throw new Error('Requested time must be in the future');
+      }
+      return true;
+    }),
   body('duration')
     .optional()
     .isInt({ min: 15, max: 180 })

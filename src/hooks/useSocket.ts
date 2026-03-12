@@ -8,10 +8,16 @@ export function useSocket(roomId?: string) {
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
-        // Create socket connection
+        // Get auth token
+        const token = localStorage.getItem('auth_token');
+        
+        // Create socket connection with authentication
         const socket = io(SOCKET_URL, {
             transports: ['websocket'],
             autoConnect: true,
+            auth: {
+                token: token
+            }
         });
 
         socket.on('connect', () => {
@@ -24,6 +30,11 @@ export function useSocket(roomId?: string) {
 
         socket.on('disconnect', () => {
             console.log('Socket disconnected');
+            setIsConnected(false);
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Socket connection error:', error.message);
             setIsConnected(false);
         });
 

@@ -18,7 +18,7 @@ class SessionRequest extends BaseModel {
   }
 
   // Get sessions for a user (as mentor or student)
-  async getUserSessions(userId, status = null) {
+  async getUserSessions(userId, status = null, limit = 50, offset = 0) {
     let query = `
       SELECT sr.*, 
              sp.username as student_name,
@@ -38,7 +38,8 @@ class SessionRequest extends BaseModel {
       params.push(status);
     }
 
-    query += ` ORDER BY sr.created_at DESC`;
+    query += ` ORDER BY sr.created_at DESC LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
 
     return await this.query(query, params);
   }

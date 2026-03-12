@@ -42,12 +42,23 @@ class SessionController {
   // Get user sessions (as mentor or student)
   async getUserSessions(req, res) {
     try {
-      const { status } = req.query;
+      const { status, limit = 50, offset = 0 } = req.query;
       const userId = req.user.id;
 
-      const sessions = await SessionRequest.getUserSessions(userId, status);
+      const sessions = await SessionRequest.getUserSessions(
+        userId, 
+        status, 
+        parseInt(limit), 
+        parseInt(offset)
+      );
 
-      res.json({ sessions });
+      res.json({ 
+        sessions,
+        pagination: {
+          limit: parseInt(limit),
+          offset: parseInt(offset)
+        }
+      });
     } catch (error) {
       console.error('Get user sessions error:', error);
       res.status(500).json({ error: 'Failed to get sessions' });
@@ -114,10 +125,37 @@ class SessionController {
           updatedSession = await SessionRequest.rejectSession(id, rejection_reason);
           break;
         case 'completed':
-          updatedSession = await SessionRequest.completeSession(id);
-          // Update session counts
-          await Profile.incrementSessionCounts(session.student_id, false);
-          await Profile.incrementSessionCounts(session.mentor_id, true);
+          // Use transaction to ensure data consistency
+          const db = require('../config/db');
+          const connection = await db.pool.getConnection();
+          try {
+            await connection.beginTransaction();
+
+            // Update session status
+            await connection.query(
+              'UPDATE session_requests SET status = ?, updated_at = NOW() WHERE id = ?',
+              ['completed', id]
+            );
+
+            // Update session counts
+            await connection.query(
+              'UPDATE profiles SET total_sessions_attended = total_sessions_attended + 1 WHERE user_id = ?',
+              [session.student_id]
+            );
+
+            await connection.query(
+              'UPDATE profiles SET total_sessions_taught = total_sessions_taught + 1 WHERE user_id = ?',
+              [session.mentor_id]
+            );
+
+            await connection.commit();
+            updatedSession = await SessionRequest.findById(id);
+          } catch (error) {
+            await connection.rollback();
+            throw error;
+          } finally {
+            connection.release();
+          }
           break;
         default:
           return res.status(400).json({ error: 'Invalid status' });

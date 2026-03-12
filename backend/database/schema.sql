@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   name VARCHAR(255),
   email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255), -- Added for JWT authentication
+  password_hash VARCHAR(255), -- Added for JWT authentication
   role ENUM('student', 'mentor', 'admin') DEFAULT 'student',
   google_refresh_token TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

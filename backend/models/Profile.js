@@ -5,10 +5,8 @@ class Profile extends BaseModel {
     super('profiles');
   }
 
-  // Create or update profile
+  // Create or update profile (allows multiple mentors per user)
   async upsertProfile(userId, profileData) {
-    const existingProfile = await this.findOne({ user_id: userId });
-
     const data = { ...profileData };
     if (data.subjects) {
       data.subjects = typeof data.subjects === 'string' ? data.subjects : JSON.stringify(data.subjects);
@@ -29,9 +27,14 @@ class Profile extends BaseModel {
       }
     }
 
-    if (existingProfile) {
-      return await this.updateByUserId(userId, data);
+    // Check if user already has any mentor profiles
+    const existingProfiles = await this.findByUserId(userId);
+    
+    if (existingProfiles && existingProfiles.length > 0) {
+      // Update existing profile instead of creating new one
+     return await this.updateByUserId(userId, data);
     } else {
+      // Create first mentor profile
       return await this.create({ user_id: userId, ...data });
     }
   }
@@ -45,6 +48,12 @@ class Profile extends BaseModel {
   // Get profile by user_id
   async getByUserId(userId) {
     return await this.findOne({ user_id: userId });
+  }
+
+  // Get all profiles by user_id (for multiple mentors support)
+  async findByUserId(userId) {
+    const query = 'SELECT * FROM profiles WHERE user_id = ? ORDER BY created_at ASC';
+    return await this.query(query, [userId]);
   }
 
   // Update mentor status

@@ -10,6 +10,8 @@ import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import FindMentor from "./pages/FindMentor";
+import TestMentorPage from "./pages/TestMentorPage";
+import CreateMentorProfile from "./pages/CreateMentorProfile";
 import BecomeMentor from "./pages/BecomeMentorWorking";
 import ViewSchedule from "./pages/ViewSchedule";
 import ViewAchievements from "./pages/ViewAchievements";
@@ -32,7 +34,6 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
             <Route
               path="/dashboard"
               element={
@@ -49,14 +50,8 @@ const App = () => (
                 </RequireAuth>
               }
             />
-            <Route
-              path="/become-mentor"
-              element={
-                <RequireAuth>
-                  <BecomeMentor />
-                </RequireAuth>
-              }
-            />
+            <Route path="/become-mentor" element={<BecomeMentor />} />
+            <Route path="/create-mentor" element={<CreateMentorProfile />} />
             <Route
               path="/schedule"
               element={
@@ -89,16 +84,10 @@ const App = () => (
                 </RequireAuth>
               }
             />
-            <Route
-              path="/room/:roomId"
-              element={
-                <RequireAuth>
-                  <VideoRoom />
-                </RequireAuth>
-              }
-            />
+            <Route path="/room/:roomId" element={<VideoRoom />} />
             <Route path="/certificate/:shareToken" element={<CertificateViewer />} />
             <Route path="/test-input" element={<TestInput />} />
+            <Route path="/test-mentor" element={<TestMentorPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
