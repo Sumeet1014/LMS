@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -140,27 +140,31 @@ export default function QuizModal({
         })
       });
 
-      if (!response.ok) throw new Error('Failed to submit quiz');
-      const data = await response.json();
+      if (response.ok) {
+        const data = await response.json();
 
-      setResult({
-        score: data.score,
-        total: data.total,
-        passed: data.passed,
-        answers: [] // We could populate this if backend returned details
-      });
-      onComplete?.(data);
-
-      if (data.passed) {
-        toast({
-          title: '🎉 Congratulations!',
-          description: `You passed with ${data.score}/${data.total} marks!`
+        setResult({
+          score: data.score,
+          total: data.total,
+          passed: data.passed,
+          certificateUrl: data.certificateUrl,
+          answers: [] // We could populate this if backend returned details
         });
+        onComplete?.(data);
+
+        if (data.passed) {
+          toast({
+            title: '🎉 Congratulations!',
+            description: `You passed with ${data.score}/${data.total} marks! Certificate generated.`
+          });
+        } else {
+          toast({
+            title: 'Quiz Completed',
+            description: `You scored ${data.score}/${data.total}. Keep learning!`
+          });
+        }
       } else {
-        toast({
-          title: 'Quiz Completed',
-          description: `You scored ${data.score}/${data.total}. Keep learning!`
-        });
+        throw new Error('Failed to submit quiz');
       }
     } catch (error: any) {
       toast({
@@ -191,6 +195,9 @@ export default function QuizModal({
             <Trophy className="h-5 w-5 text-primary" />
             {challengeTitle}
           </DialogTitle>
+          <DialogDescription>
+            Answer all questions to complete the quiz and earn your certificate
+          </DialogDescription>
         </DialogHeader>
 
         {loading ? (

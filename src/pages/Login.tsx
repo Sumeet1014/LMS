@@ -256,7 +256,7 @@ export default function Login() {
           }}
         >
           <div style={{ fontSize: '36px', marginBottom: '4px' }}>📚</div>
-          <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 700 }}>Study Circle</h1>
+          <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 700 }}>Learning Management System</h1>
           <p style={{ margin: '6px 0 0', opacity: 0.85, fontSize: '14px' }}>
             Peer-to-peer learning community
           </p>

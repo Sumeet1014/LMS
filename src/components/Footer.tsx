@@ -11,13 +11,13 @@ const Footer = () => {
               <div className="p-2 rounded-lg bg-white/10">
                 <GraduationCap className="w-5 h-5" />
               </div>
-              <span className="font-bold text-lg">Study Circle</span>
+              <span className="font-bold text-lg">Learning Management System</span>
             </div>
             <p className="text-white/70 mb-4 leading-relaxed">
               Connecting students worldwide through peer-to-peer learning and collaborative study sessions.
             </p>
             <p className="text-white/70 text-sm">
-              © 2025 Study Circle • studycircleteam2@gmail.com
+              © 2025 Learning Management System • studycircleteam2@gmail.com
             </p>
           </div>
 

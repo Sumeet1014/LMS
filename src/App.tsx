@@ -13,6 +13,7 @@ import FindMentor from "./pages/FindMentor";
 import TestMentorPage from "./pages/TestMentorPage";
 import CreateMentorProfile from "./pages/CreateMentorProfile";
 import BecomeMentor from "./pages/BecomeMentorWorking";
+import ManageMentorProfiles from "./pages/ManageMentorProfiles";
 import ViewSchedule from "./pages/ViewSchedule";
 import ViewAchievements from "./pages/ViewAchievements";
 import Challenges from "./pages/Challenges";
@@ -52,6 +53,7 @@ const App = () => (
             />
             <Route path="/become-mentor" element={<BecomeMentor />} />
             <Route path="/create-mentor" element={<CreateMentorProfile />} />
+            <Route path="/mentor-profiles" element={<ManageMentorProfiles />} />
             <Route
               path="/schedule"
               element={

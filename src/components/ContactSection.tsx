@@ -32,7 +32,7 @@ const ContactSection = () => {
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-20 animate-slideInUp">
           <h2 className="text-4xl md:text-6xl font-black text-foreground dark:text-foreground mb-8">
-            Join <span className="text-magic">Study Circle</span>
+            Join <span className="text-magic">Learning Management System</span>
           </h2>
           <p className="text-xl md:text-2xl text-muted-foreground dark:text-muted-foreground max-w-4xl mx-auto leading-relaxed font-medium">
             Ready to transform your learning experience? Register now and connect with amazing study partners.
@@ -122,7 +122,7 @@ const ContactSection = () => {
               
               <Button type="submit" className="btn-primary w-full">
                 <Send className="w-4 h-4 mr-2" />
-                Join Study Circle
+                Join Learning Management System
               </Button>
             </form>
           </Card>
@@ -134,7 +134,7 @@ const ContactSection = () => {
                 <div className="p-3 rounded-full bg-primary/10">
                   <GraduationCap className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-subheading text-foreground">Why Join Study Circle?</h3>
+                <h3 className="text-subheading text-foreground">Why Join Learning Management System?</h3>
               </div>
               
               <div className="space-y-4">

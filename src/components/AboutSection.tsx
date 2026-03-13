@@ -50,7 +50,7 @@ const AboutSection = () => {
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="text-center mb-20 animate-slideInUp">
           <h2 className="text-4xl md:text-6xl font-black text-foreground dark:text-foreground mb-8">
-            Why <span className="text-magic">Study Circle?</span>
+          Why <span className="text-magic">Learning Management System?</span>
           </h2>
           <p className="text-xl md:text-2xl text-muted-foreground dark:text-muted-foreground max-w-4xl mx-auto leading-relaxed font-medium">
             We believe that the best learning happens when students support each other. 

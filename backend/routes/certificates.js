@@ -4,27 +4,7 @@ const { executeQuery } = require('../config/db');
 
 const router = express.Router();
 
-// All routes require authentication
-router.use(authenticateToken);
-
-// Get user certificates
-router.get('/', async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const certificates = await executeQuery(
-      'SELECT * FROM certificates WHERE user_id = ? ORDER BY created_at DESC',
-      [userId]
-    );
-
-    res.json({ certificates });
-  } catch (error) {
-    console.error('Get certificates error:', error);
-    res.status(500).json({ error: 'Failed to get certificates' });
-  }
-});
-
-// Get certificate by share token
+// Get certificate by share token (PUBLIC - no auth required)
 router.get('/shared/:shareToken', async (req, res) => {
   try {
     const { shareToken } = req.params;
@@ -55,6 +35,26 @@ router.get('/shared/:shareToken', async (req, res) => {
   } catch (error) {
     console.error('Get shared certificate error:', error);
     res.status(500).json({ error: 'Failed to get certificate' });
+  }
+});
+
+// All other routes require authentication
+router.use(authenticateToken);
+
+// Get user certificates
+router.get('/', async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const certificates = await executeQuery(
+      'SELECT * FROM certificates WHERE user_id = ? ORDER BY created_at DESC',
+      [userId]
+    );
+
+    res.json({ certificates });
+  } catch (error) {
+    console.error('Get certificates error:', error);
+    res.status(500).json({ error: 'Failed to get certificates' });
   }
 });
 

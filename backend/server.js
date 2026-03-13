@@ -63,11 +63,13 @@ const resourceRoutes = require('./routes/resources');
 const certificateRoutes = require('./routes/certificates');
 const subjectRoutes = require('./routes/subjects');
 const feedbackRoutes = require('./routes/feedback');
+const mentorProfileRoutes = require('./routes/mentorProfiles');
 
 // Mount routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/profiles', profileRoutes);
+app.use('/api/mentor-profiles', mentorProfileRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/ai-chat', aiChatRoutes);

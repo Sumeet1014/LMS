@@ -64,7 +64,7 @@ export default function Dashboard() {
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-magic">Study Circle</h1>
+            <h1 className="text-2xl font-bold text-magic">Learning Management System</h1>
             <p className="text-sm text-muted-foreground">
               Welcome back, {user?.name || user?.email}!
             </p>
@@ -191,7 +191,7 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>
-                Get started with Study Circle - connect, learn, and grow together
+              Get started with Learning Management System - connect, learn, and grow together
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -203,6 +203,10 @@ export default function Dashboard() {
                 <Button variant="outline" onClick={() => navigate('/become-mentor')}>
                   <Users className="mr-2 h-4 w-4" />
                   Become a Mentor
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/mentor-profiles')}>
+                  <Users className="mr-2 h-4 w-4" />
+                  My Mentor Profiles
                 </Button>
                 <Button variant="outline" onClick={() => navigate('/schedule')}>
                   <Calendar className="mr-2 h-4 w-4" />

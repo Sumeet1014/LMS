@@ -207,7 +207,7 @@ export default function CertificateViewer() {
             {/* Footer */}
             <div className="w-full flex items-end justify-between">
               <div style={{ color: '#d0c4a8' }}>
-                <p className="font-bold text-lg">Study Circle</p>
+                <p className="font-bold text-lg">Learning Management System</p>
                 <p className="text-sm mt-1">Date: {dateString}</p>
               </div>
 

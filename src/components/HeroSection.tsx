@@ -20,7 +20,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Beautiful gradient background */}
       <div className="absolute inset-0">
         <div className="absolute inset-0" style={{ background: 'var(--gradient-hero)' }} />
@@ -37,7 +37,7 @@ const HeroSection = () => {
               <GraduationCap className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-heading text-foreground dark:text-foreground font-black">
-              Study Circle
+              Learning Management System
             </h1>
           </div>
 
@@ -57,7 +57,7 @@ const HeroSection = () => {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-slideInUp">
             <Button className="btn-primary" onClick={handleGetStarted}>
-              {user ? 'Go to Dashboard' : 'Join Study Circle'}
+              {user ? 'Go to Dashboard' : 'Join Learning Management System'}
             </Button>
             <Button className="btn-outline" onClick={scrollToAbout}>
               Learn More

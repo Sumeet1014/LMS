@@ -39,7 +39,7 @@ router.post('/', async (req, res) => {
 
     if (useAI) {
       try {
-        const systemPrompt = `You are Study Circle assistant. Be short, polite and practical. Give study tips, scheduling help, or simple troubleshooting. If user asks for code provide a minimal runnable snippet. If outside scope (medical/legal), politely decline.`;
+        const systemPrompt = `You are Learning Management System assistant. Be short, polite and practical. Give study tips, scheduling help, or simple troubleshooting. If user asks for code provide a minimal runnable snippet. If outside scope (medical/legal), politely decline.`;
 
         // Load recent messages for context
         let contextMessages = [];

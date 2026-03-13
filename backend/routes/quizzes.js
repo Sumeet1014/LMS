@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { executeQuery } = require('../config/db');
+const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ router.get('/questions/:challengeId', async (req, res) => {
     const { challengeId } = req.params;
 
     const questions = await executeQuery(
-      `SELECT qq.*, qo.option_text, qo.is_correct, qo.option_order
+      `SELECT qq.*, qo.id as option_id, qo.option_text, qo.is_correct, qo.option_order
        FROM quiz_questions qq
        LEFT JOIN quiz_options qo ON qq.id = qo.question_id
        WHERE qq.challenge_id = ?
@@ -35,6 +36,7 @@ router.get('/questions/:challengeId', async (req, res) => {
 
       if (row.option_text) {
         acc[row.id].options.push({
+          id: row.option_id,
           option_text: row.option_text,
           is_correct: row.is_correct,
           option_order: row.option_order
@@ -56,6 +58,18 @@ router.post('/submit', async (req, res) => {
   try {
     const { challengeId, answers } = req.body;
     const userId = req.user.id;
+
+    // Get challenge details
+    const challenges = await executeQuery(
+      'SELECT title FROM challenges WHERE id = ?',
+      [challengeId]
+    );
+
+    if (challenges.length === 0) {
+      return res.status(404).json({ error: 'Challenge not found' });
+    }
+
+    const challengeTitle = challenges[0].title;
 
     // Calculate score
     const questions = await executeQuery(
@@ -87,6 +101,7 @@ router.post('/submit', async (req, res) => {
     }
 
     const passed = (totalScore / totalMarks) >= 0.6; // 60% pass rate
+    const percentage = Math.round((totalScore / totalMarks) * 100);
 
     // Save quiz attempt
     await executeQuery(
@@ -94,11 +109,36 @@ router.post('/submit', async (req, res) => {
       [userId, challengeId, JSON.stringify(answerMap), totalScore, totalMarks, passed, new Date()]
     );
 
+    let certificateUrl = null;
+    let shareToken = null;
+
+    // Create certificate if passed
+    if (passed) {
+      shareToken = uuidv4().replace(/-/g, '');
+
+      const result = await executeQuery(
+        'INSERT INTO certificates (title, user_id, challenge_id, score, share_token, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [
+          `${challengeTitle} - Certificate of Completion`,
+          userId,
+          challengeId,
+          totalScore,
+          shareToken,
+          new Date().toISOString().slice(0, 19).replace('T', ' ')
+        ]
+      );
+
+      certificateUrl = `/certificate/${shareToken}`;
+    }
+
     res.json({
       score: totalScore,
       total: totalMarks,
+      percentage,
       passed,
-      message: 'Quiz submitted successfully'
+      certificateUrl,
+      shareToken,
+      message: passed ? 'Congratulations! You passed the quiz!' : 'Quiz submitted successfully'
     });
   } catch (error) {
     console.error('Submit quiz error:', error);
