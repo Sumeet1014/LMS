@@ -10,8 +10,6 @@ import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import FindMentor from "./pages/FindMentor";
-import TestMentorPage from "./pages/TestMentorPage";
-import CreateMentorProfile from "./pages/CreateMentorProfile";
 import BecomeMentor from "./pages/BecomeMentorWorking";
 import ManageMentorProfiles from "./pages/ManageMentorProfiles";
 import ViewSchedule from "./pages/ViewSchedule";
@@ -20,7 +18,6 @@ import Challenges from "./pages/Challenges";
 import Leaderboard from "./pages/Leaderboard";
 import VideoRoom from "./pages/VideoRoom";
 import CertificateViewer from "./pages/CertificateViewer";
-import TestInput from "./pages/TestInput";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,7 +49,6 @@ const App = () => (
               }
             />
             <Route path="/become-mentor" element={<BecomeMentor />} />
-            <Route path="/create-mentor" element={<CreateMentorProfile />} />
             <Route path="/mentor-profiles" element={<ManageMentorProfiles />} />
             <Route
               path="/schedule"
@@ -88,8 +84,6 @@ const App = () => (
             />
             <Route path="/room/:roomId" element={<VideoRoom />} />
             <Route path="/certificate/:shareToken" element={<CertificateViewer />} />
-            <Route path="/test-input" element={<TestInput />} />
-            <Route path="/test-mentor" element={<TestMentorPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
