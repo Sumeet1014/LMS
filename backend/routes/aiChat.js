@@ -9,7 +9,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // AI Chat endpoint (migrated from existing server)
-router.post('/ai-chat', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { sessionId, message } = req.body;
     const userId = req.user.id;

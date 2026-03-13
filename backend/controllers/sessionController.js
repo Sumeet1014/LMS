@@ -9,6 +9,7 @@ class SessionController {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        console.log('Session validation failed:', JSON.stringify(errors.array(), null, 2));
         return res.status(400).json({ 
           error: 'Validation failed', 
           details: errors.array() 
@@ -18,6 +19,9 @@ class SessionController {
       const { mentor_id, title, description, subject_id, requested_time, duration } = req.body;
       const student_id = req.user.id;
 
+      // Convert ISO8601 to MySQL datetime format
+      const mysqlDateTime = new Date(requested_time).toISOString().slice(0, 19).replace('T', ' ');
+
       // Create session request
       const session = await SessionRequest.createSessionRequest({
         mentor_id,
@@ -25,7 +29,7 @@ class SessionController {
         title,
         description,
         subject_id,
-        requested_time,
+        requested_time: mysqlDateTime,
         duration
       });
 

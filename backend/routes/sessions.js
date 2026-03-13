@@ -20,8 +20,7 @@ const createSessionValidation = [
     .isLength({ max: 500 })
     .withMessage('Description must be less than 500 characters'),
   body('subject_id')
-    .notEmpty()
-    .withMessage('Subject ID is required'),
+    .optional(),
   body('requested_time')
     .notEmpty()
     .withMessage('Requested time is required')

@@ -60,7 +60,7 @@ router.post('/sessions/:sessionId', sendSessionMessageValidation, async (req, re
 
     // Get the created message
     const messages = await executeQuery(
-      'SELECT sm.*, u.name as user_name FROM session_messages sm LEFT JOIN users u ON sm.user_id = u.id WHERE sm.id = ?',
+      'SELECT sm.*, u.full_name as user_name FROM session_messages sm LEFT JOIN users u ON sm.user_id = u.id WHERE sm.id = ?',
       [messageId]
     );
 
@@ -93,7 +93,7 @@ router.get('/sessions/:sessionId', async (req, res) => {
 
     // Get messages
     const messages = await executeQuery(
-      `SELECT sm.*, u.name as user_name 
+      `SELECT sm.*, u.full_name as user_name 
        FROM session_messages sm 
        LEFT JOIN users u ON sm.user_id = u.id 
        WHERE sm.session_id = ? 
@@ -117,7 +117,7 @@ router.get('/video-chat/:roomId', async (req, res) => {
 
     // Get messages for room
     const messages = await executeQuery(
-      `SELECT vcm.*, u.name as user_name 
+      `SELECT vcm.*, u.full_name as user_name 
        FROM video_chat_messages vcm 
        LEFT JOIN users u ON vcm.user_id = u.id 
        WHERE vcm.room_id = ? 
@@ -146,7 +146,9 @@ router.post('/video-chat/:roomId', sendMessageValidation, async (req, res) => {
 
     const { roomId } = req.params;
     const { message } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.id; // Keep as-is since it comes from DB
+
+    console.log('Video chat message - roomId:', roomId, 'userId:', userId, 'userIdType:', typeof userId);
 
     // Create message
     const messageId = uuidv4();
@@ -159,7 +161,7 @@ router.post('/video-chat/:roomId', sendMessageValidation, async (req, res) => {
 
     // Get the created message
     const messages = await executeQuery(
-      'SELECT vcm.*, u.name as user_name FROM video_chat_messages vcm LEFT JOIN users u ON vcm.user_id = u.id WHERE vcm.id = ?',
+      'SELECT vcm.*, u.full_name as user_name FROM video_chat_messages vcm LEFT JOIN users u ON vcm.user_id = u.id WHERE vcm.id = ?',
       [messageId]
     );
 
@@ -169,7 +171,12 @@ router.post('/video-chat/:roomId', sendMessageValidation, async (req, res) => {
     });
   } catch (error) {
     console.error('Send video chat message error:', error);
-    res.status(500).json({ error: 'Failed to send video chat message' });
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to send video chat message',
+      details: error.message 
+    });
   }
 });
 
@@ -193,7 +200,9 @@ router.post('/whiteboard/:roomId', async (req, res) => {
   try {
     const { roomId } = req.params;
     const { stroke_data } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.id; // Keep as-is since it comes from DB
+
+    console.log('Whiteboard stroke - roomId:', roomId, 'userId:', userId, 'userIdType:', typeof userId);
 
     const id = uuidv4();
     await executeQuery(
@@ -204,7 +213,11 @@ router.post('/whiteboard/:roomId', async (req, res) => {
     res.status(201).json({ success: true });
   } catch (error) {
     console.error('Save whiteboard stroke error:', error);
-    res.status(500).json({ error: 'Failed to save whiteboard stroke' });
+    console.error('Error details:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to save whiteboard stroke',
+      details: error.message 
+    });
   }
 });
 

@@ -94,7 +94,7 @@ export default function ViewSchedule() {
     try {
       const response = await sessionApi.updateSessionStatus(sessionId, { status: 'approved' });
       
-      if (!response.sessions) {
+      if (!response.session && !response.success) {
         throw new Error('Failed to approve session');
       }
 

@@ -67,8 +67,39 @@ export default function FindMentor() {
 
     try {
       const token = localStorage.getItem('auth_token');
+      
+      // Get subjects first
+      const subjectsResponse = await fetch(`${import.meta.env.VITE_API_URL}/subjects`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      let subjectId = null;
+      if (subjectsResponse.ok) {
+        const subjectsData = await subjectsResponse.json();
+        // Use first subject as default
+        if (subjectsData.subjects && subjectsData.subjects.length > 0) {
+          subjectId = subjectsData.subjects[0].id;
+        }
+      }
+      
       const proposedTime = new Date();
       proposedTime.setDate(proposedTime.getDate() + 1);
+
+      const requestBody: any = {
+        mentor_id: mentorId,
+        title: 'Study Session Request',
+        requested_time: proposedTime.toISOString(),
+        duration: 60
+      };
+      
+      // Only add subject_id if we have one
+      if (subjectId) {
+        requestBody.subject_id = subjectId;
+      }
+
+      console.log('Sending session request:', requestBody);
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/sessions`, {
         method: 'POST',
@@ -76,13 +107,7 @@ export default function FindMentor() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          mentor_id: mentorId,
-          title: 'Study Session Request',
-          subject_id: 1, // Default subject for now
-          requested_time: proposedTime.toISOString(),
-          duration: 60
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
@@ -177,7 +202,7 @@ export default function FindMentor() {
                     {/* Request Button */}
                     <Button
                       className="w-full btn-primary"
-                      onClick={() => handleRequestSession(mentor.user_id)}
+                      onClick={() => handleRequestSession(mentor.user_id || mentor.id)}
                     >
                       Request Session
                     </Button>

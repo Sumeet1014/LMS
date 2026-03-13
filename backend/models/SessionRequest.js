@@ -66,7 +66,7 @@ class SessionRequest extends BaseModel {
   async updateStatus(sessionId, status, additionalData = {}) {
     const updateData = {
       status,
-      responded_at: this.getCurrentTimestamp(),
+      responded_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
       ...additionalData
     };
 
