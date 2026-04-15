@@ -13,21 +13,19 @@ interface Certificate {
   challenge_id: string | null;
 }
 
-export default function BadgeDisplay({ userId }: { userId: string }) {
+export default function BadgeDisplay({ userId }: { userId: string | number }) {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchCertificates();
+    if (userId) fetchCertificates();
   }, [userId]);
 
   const fetchCertificates = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/certificates`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/certificates?t=${Date.now()}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
         const data = await response.json();
@@ -44,8 +42,8 @@ export default function BadgeDisplay({ userId }: { userId: string }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {certificates.map((cert) => (
-        <Card key={cert.id} className="hover:shadow-lg transition-shadow border-primary/20">
+      {certificates.map((cert, idx) => (
+        <Card key={cert.id || idx} className="hover:shadow-lg transition-shadow border-primary/20">
           <CardHeader className="pb-2">
             <div className="mx-auto p-3 rounded-full bg-primary/10">
               <Award className="w-10 h-10 text-primary" />

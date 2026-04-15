@@ -11,17 +11,28 @@ router.use(authenticateToken);
 router.get('/', authorizeRole(['admin']), async (req, res) => {
   try {
     const users = await User.findAll();
-    
-    // Remove passwords from response
     const usersWithoutPasswords = users.map(user => {
       const { password, ...userWithoutPassword } = user;
       return userWithoutPassword;
     });
-
     res.json({ users: usersWithoutPasswords });
   } catch (error) {
-    console.error('Get users error:', error);
     res.status(500).json({ error: 'Failed to get users' });
+  }
+});
+
+// Get students list (mentor can access to create sessions)
+router.get('/list/students', authorizeRole(['mentor', 'admin']), async (req, res) => {
+  try {
+    const { executeQuery } = require('../config/db');
+    const students = await executeQuery(
+      `SELECT u.id, u.full_name, u.email, u.role 
+       FROM users u WHERE u.role = 'student' 
+       ORDER BY u.full_name ASC`
+    );
+    res.json({ users: students });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get students' });
   }
 });
 

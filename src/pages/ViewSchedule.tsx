@@ -33,6 +33,7 @@ export default function ViewSchedule() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMentor = user?.role === 'mentor';
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmingSession, setConfirmingSession] = useState<string | null>(null);
@@ -147,9 +148,9 @@ export default function ViewSchedule() {
   };
 
   const getPartnerName = (session: Session) => {
-    const partnerId = session.mentor_id === user?.id ? session.student_id : session.mentor_id;
-    const partner = profiles[partnerId];
-    return partner?.username || 'Unknown User';
+    const isMentor = String(session.mentor_id) === String(user?.id);
+    const partner = isMentor ? profiles[session.student_id] : profiles[session.mentor_id];
+    return partner?.username || (isMentor ? session.student_name : session.mentor_name) || 'Unknown User';
   };
 
   if (loading) {
@@ -169,7 +170,7 @@ export default function ViewSchedule() {
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
+          <Button variant="ghost" size="sm" onClick={() => navigate(isMentor ? '/mentor/dashboard' : '/student/dashboard')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold text-magic">My Schedule</h1>
@@ -240,9 +241,9 @@ export default function ViewSchedule() {
                       {session.status === 'approved' && (
                         <Button
                           onClick={() => {
-                            const role = session.mentor_id === user?.id ? 'mentor' : 'student';
+                            const role = String(session.mentor_id) === String(user?.id) ? 'mentor' : 'student';
                             const roomId = session.video_room_id || session.id;
-                            navigate(`/room/${roomId}?role=${role}&mentorId=${session.mentor_id}`);
+                            navigate(`/room/${roomId}?role=${role}&mentorId=${session.mentor_id}&sessionId=${session.id}`);
                           }}
                           className="btn-primary"
                         >
@@ -251,7 +252,7 @@ export default function ViewSchedule() {
                         </Button>
                       )}
                       
-                      {session.status === 'pending' && session.mentor_id === user?.id && (
+                      {session.status === 'pending' && isMentor && String(session.mentor_id) === String(user?.id) && (
                         <Button
                           onClick={() => handleApproveSession(session.id)}
                           disabled={confirmingSession === session.id}
@@ -262,7 +263,7 @@ export default function ViewSchedule() {
                         </Button>
                       )}
                       
-                      {session.status === 'pending' && session.student_id === user?.id && (
+                      {session.status === 'pending' && (!isMentor || String(session.student_id) === String(user?.id)) && String(session.mentor_id) !== String(user?.id) && (
                         <Badge variant="outline" className="self-start">
                           Waiting for mentor approval
                         </Badge>

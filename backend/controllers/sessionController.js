@@ -114,41 +114,59 @@ class SessionController {
         return res.status(404).json({ error: 'Session not found' });
       }
 
-      // Check if user is mentor (only mentors can approve/reject)
-      if (session.mentor_id !== userId) {
+      // Check permissions:
+      // - Only mentors can approve/reject
+      // - Both mentor and student can mark as completed (end call)
+      if (status !== 'completed' && String(session.mentor_id) !== String(userId)) {
         return res.status(403).json({ error: 'Only mentors can update session status' });
+      }
+      if (status === 'completed' && String(session.mentor_id) !== String(userId) && String(session.student_id) !== String(userId)) {
+        return res.status(403).json({ error: 'Not authorized for this session' });
       }
 
       // Update session status
       let updatedSession;
       switch (status) {
         case 'approved':
-          updatedSession = await SessionRequest.approveSession(id);
+          // Auto-generate video room ID on approval
+          await SessionRequest.updateById(id, {
+            status: 'approved',
+            responded_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            video_room_id: `room_${id}`
+          });
+          updatedSession = await SessionRequest.findById(id);
           break;
         case 'rejected':
           updatedSession = await SessionRequest.rejectSession(id, rejection_reason);
           break;
         case 'completed':
-          // Use transaction to ensure data consistency
           const db = require('../config/db');
           const connection = await db.pool.getConnection();
           try {
             await connection.beginTransaction();
 
-            // Update session status
             await connection.query(
               'UPDATE session_requests SET status = ?, updated_at = NOW() WHERE id = ?',
               ['completed', id]
             );
 
-            // Update session counts
+            // Update student: sessions attended + credits + contribution score
             await connection.query(
-              'UPDATE profiles SET total_sessions_attended = total_sessions_attended + 1 WHERE user_id = ?',
+              `UPDATE profiles SET 
+                total_sessions_attended = total_sessions_attended + 1,
+                credits = credits + 10,
+                contribution_score = contribution_score + 5
+               WHERE user_id = ?`,
               [session.student_id]
             );
 
+            // Update mentor: sessions taught + credits + contribution score
             await connection.query(
-              'UPDATE profiles SET total_sessions_taught = total_sessions_taught + 1 WHERE user_id = ?',
+              `UPDATE profiles SET 
+                total_sessions_taught = total_sessions_taught + 1,
+                credits = credits + 20,
+                contribution_score = contribution_score + 10
+               WHERE user_id = ?`,
               [session.mentor_id]
             );
 

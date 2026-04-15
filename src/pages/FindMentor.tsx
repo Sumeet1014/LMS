@@ -196,7 +196,18 @@ export default function FindMentor() {
                         <Clock className="h-4 w-4" />
                         Availability
                       </h4>
-                      <p className="text-sm text-muted-foreground">Available most weekdays</p>
+                      {mentor.availability?.length > 0 ? (
+                        <div className="space-y-1">
+                          {mentor.availability.map((slot: any, index: number) => (
+                            <div key={index} className="flex items-center justify-between text-xs bg-muted rounded px-2 py-1">
+                              <span className="font-medium">{slot.day}</span>
+                              <span className="text-muted-foreground">{slot.start_time} – {slot.end_time}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No availability listed</p>
+                      )}
                     </div>
 
                     {/* Request Button */}

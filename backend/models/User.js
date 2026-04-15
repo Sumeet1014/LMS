@@ -50,10 +50,11 @@ class User extends BaseModel {
   // Get user profile with profile data
   async getUserWithProfile(userId) {
     const query = `
-      SELECT u.*, p.username, p.bio, p.college_email, p.is_mentor, 
+      SELECT u.*, 
+             COALESCE(p.username, u.full_name) as username,
+             p.bio, p.college_email, p.is_mentor, 
              p.rating, p.credits, p.contribution_score, 
-             p.total_sessions_attended, p.total_sessions_taught,
-             p.subjects, p.subject_ids, p.availability
+             p.total_sessions_attended, p.total_sessions_taught
       FROM users u
       LEFT JOIN profiles p ON u.id = p.user_id
       WHERE u.id = ?
@@ -66,15 +67,47 @@ class User extends BaseModel {
   // Get all mentors
   async getMentors() {
     const query = `
-      SELECT u.*, p.username, p.bio, p.college_email, p.rating, 
-             p.total_sessions_taught, p.subjects
+      SELECT u.id, u.full_name, u.email, u.role,
+             p.id as profile_id, p.username, p.bio, p.college_email, p.rating, 
+             p.total_sessions_taught, p.is_mentor,
+             GROUP_CONCAT(DISTINCT s.name ORDER BY s.name SEPARATOR ',') as subjects_csv,
+             GROUP_CONCAT(DISTINCT CONCAT(pa.day, '|', pa.start_time, '|', pa.end_time) ORDER BY pa.day SEPARATOR ';;') as availability_slots
       FROM users u
       INNER JOIN profiles p ON u.id = p.user_id
-      WHERE p.is_mentor = true AND u.role = 'mentor'
+      LEFT JOIN profile_subjects ps ON p.id = ps.profile_id
+      LEFT JOIN subjects s ON ps.subject_id = s.id
+      LEFT JOIN profile_availability pa ON p.id = pa.profile_id
+      WHERE p.is_mentor = true OR u.role = 'mentor'
+      GROUP BY u.id, p.id
       ORDER BY p.rating DESC
     `;
 
-    return await this.query(query);
+    const rows = await this.query(query);
+
+    // Deduplicate by user id
+    const seen = new Set();
+    const unique = rows.filter(row => {
+      if (seen.has(row.id)) return false;
+      seen.add(row.id);
+      return true;
+    });
+
+    return unique.map(row => {
+      let availability = [];
+      if (row.availability_slots) {
+        availability = row.availability_slots.split(';;').map(slot => {
+          const [day, start, end] = slot.split('|');
+          const fmt = (t) => t ? t.substring(0, 5) : '';
+          return { day, start_time: fmt(start), end_time: fmt(end) };
+        });
+      }
+      return {
+        ...row,
+        username: row.username || row.full_name,
+        subjects: row.subjects_csv ? row.subjects_csv.split(',') : [],
+        availability
+      };
+    });
   }
 
   // Get leaderboard

@@ -128,7 +128,8 @@ export default function RatingModal({ sessionId, raterId, rateeId, onClose, onSu
                 setError(null);
               }}
               rows={4}
-              className="mt-2"
+              className="mt-2 text-gray-900 bg-white border-gray-300 placeholder:text-gray-400"
+              style={{ color: '#111', backgroundColor: '#fff' }}
               placeholder="Share what went well or what could be improved..."
             />
           </div>

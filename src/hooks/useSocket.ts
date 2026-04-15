@@ -3,65 +3,69 @@ import { io, Socket } from 'socket.io-client';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3001';
 
+// Singleton — survives HMR hot reloads
+let globalSocket: Socket | null = null;
+
 export function useSocket(roomId?: string) {
-    const socketRef = useRef<Socket | null>(null);
-    const [isConnected, setIsConnected] = useState(false);
+    const [isConnected, setIsConnected] = useState(() => globalSocket?.connected ?? false);
+    const roomIdRef = useRef(roomId);
+
+    useEffect(() => { roomIdRef.current = roomId; }, [roomId]);
 
     useEffect(() => {
-        // Get auth token
-        const token = localStorage.getItem('auth_token');
-        
-        // Create socket connection with authentication
-        const socket = io(SOCKET_URL, {
-            transports: ['websocket'],
-            autoConnect: true,
-            auth: {
-                token: token
-            }
-        });
+        if (!globalSocket) {
+            const token = localStorage.getItem('auth_token');
+            globalSocket = io(SOCKET_URL, {
+                transports: ['websocket'],
+                autoConnect: true,
+                reconnection: true,
+                reconnectionAttempts: 10,
+                reconnectionDelay: 1000,
+                auth: { token }
+            });
+        }
 
-        socket.on('connect', () => {
-            console.log('Socket connected:', socket.id);
+        const socket = globalSocket;
+
+        const onConnect = () => {
             setIsConnected(true);
-            if (roomId) {
-                socket.emit('join-session', roomId);
-            }
-        });
+            if (roomIdRef.current) socket.emit('join-session', roomIdRef.current);
+        };
+        const onDisconnect = () => setIsConnected(false);
 
-        socket.on('disconnect', () => {
-            console.log('Socket disconnected');
-            setIsConnected(false);
-        });
+        socket.on('connect', onConnect);
+        socket.on('disconnect', onDisconnect);
 
-        socket.on('connect_error', (error) => {
-            console.error('Socket connection error:', error.message);
-            setIsConnected(false);
-        });
-
-        socketRef.current = socket;
+        if (socket.connected) {
+            setIsConnected(true);
+            if (roomId) socket.emit('join-session', roomId);
+        }
 
         return () => {
-            socket.disconnect();
+            socket.off('connect', onConnect);
+            socket.off('disconnect', onDisconnect);
         };
+    }, []);
+
+    useEffect(() => {
+        if (globalSocket?.connected && roomId) {
+            globalSocket.emit('join-session', roomId);
+        }
     }, [roomId]);
 
     const emit = useCallback((event: string, data: any) => {
-        if (socketRef.current && isConnected) {
-            socketRef.current.emit(event, { ...data, sessionId: roomId });
+        if (globalSocket?.connected) {
+            globalSocket.emit(event, { ...data, sessionId: roomIdRef.current });
         }
-    }, [roomId, isConnected]);
+    }, []);
 
     const on = useCallback((event: string, callback: (...args: any[]) => void) => {
-        if (socketRef.current) {
-            socketRef.current.on(event, callback);
-        }
+        globalSocket?.on(event, callback);
     }, []);
 
     const off = useCallback((event: string, callback?: (...args: any[]) => void) => {
-        if (socketRef.current) {
-            socketRef.current.off(event, callback);
-        }
+        globalSocket?.off(event, callback);
     }, []);
 
-    return { socket: socketRef.current, isConnected, emit, on, off };
+    return { socket: globalSocket, isConnected, emit, on, off };
 }

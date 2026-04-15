@@ -3,9 +3,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Trophy, Target, Calendar, BookOpen, CheckCircle2 } from 'lucide-react';
+import { Trophy, Target, Calendar, BookOpen, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import Navigation from '@/components/Navigation';
+import { useNavigate } from 'react-router-dom';
 import QuizModal from '@/components/QuizModal';
 
 interface Challenge {
@@ -28,6 +28,7 @@ interface ChallengeProgress {
 export default function Challenges() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [progress, setProgress] = useState<Record<string, ChallengeProgress>>({});
   const [loading, setLoading] = useState(true);
@@ -96,8 +97,10 @@ export default function Challenges() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navigation />
         <div className="container mx-auto px-4 py-8">
+          <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2 mb-4">
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Button>
           <p className="text-muted-foreground">Loading challenges...</p>
         </div>
       </div>
@@ -106,9 +109,11 @@ export default function Challenges() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-8">
+          <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2 mr-2">
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Button>
           <Target className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-3xl font-bold">Quizzes & Challenges</h1>

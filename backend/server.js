@@ -32,17 +32,17 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
+// Rate limiting — relaxed for development
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 500
 });
 app.use(limiter);
 
-// Stricter rate limiting for auth endpoints
+// Auth rate limiting
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // limit each IP to 50 requests per windowMs (increased for development)
+  windowMs: 15 * 60 * 1000,
+  max: 200,
   message: 'Too many authentication attempts, please try again later'
 });
 
@@ -64,6 +64,9 @@ const certificateRoutes = require('./routes/certificates');
 const subjectRoutes = require('./routes/subjects');
 const feedbackRoutes = require('./routes/feedback');
 const mentorProfileRoutes = require('./routes/mentorProfiles');
+const assignmentRoutes = require('./routes/assignments');
+const mentorQuizRoutes = require('./routes/mentorQuizzes');
+const courseRoutes = require('./routes/courses');
 
 // Mount routes
 app.use('/api/auth', authLimiter, authRoutes);
@@ -79,6 +82,9 @@ app.use('/api/resources', resourceRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/subjects', subjectRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/assignments', assignmentRoutes);
+app.use('/api/mentor-quizzes', mentorQuizRoutes);
+app.use('/api/courses', courseRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -109,6 +115,9 @@ io.on('connection', (socket) => {
   // Join room for session chat
   socket.on('join-session', (sessionId) => {
     socket.join(`session-${sessionId}`);
+    console.log(`User ${socket.userId} joined session-${sessionId}`);
+    // Notify others in the room that a peer joined
+    socket.to(`session-${sessionId}`).emit('peer-joined', { userId: socket.userId });
   });
 
   // Handle chat messages

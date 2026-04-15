@@ -94,19 +94,24 @@ class SessionRequest extends BaseModel {
   async getUpcomingSessions(userId) {
     const query = `
       SELECT sr.*, 
-             sp.username as student_name,
-             mp.username as mentor_name,
+             su.full_name as student_name,
+             mu.full_name as mentor_name,
              sub.name as subject_name
       FROM session_requests sr
-      LEFT JOIN profiles sp ON sr.student_id = sp.user_id
-      LEFT JOIN profiles mp ON sr.mentor_id = mp.user_id
+      LEFT JOIN users su ON sr.student_id = su.id
+      LEFT JOIN users mu ON sr.mentor_id = mu.id
       LEFT JOIN subjects sub ON sr.subject_id = sub.id
       WHERE (sr.student_id = ? OR sr.mentor_id = ?)
-        AND sr.status IN ('approved', 'ongoing')
-        AND sr.requested_time > NOW()
-      ORDER BY sr.requested_time ASC
+        AND sr.status IN ('approved', 'ongoing', 'pending')
+      ORDER BY 
+        CASE sr.status 
+          WHEN 'approved' THEN 1 
+          WHEN 'pending' THEN 2
+          ELSE 3 
+        END,
+        sr.requested_time ASC
+      LIMIT 10
     `;
-
     return await this.query(query, [userId, userId]);
   }
 

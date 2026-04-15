@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Trophy, Medal, Award } from 'lucide-react';
-import Navigation from '@/components/Navigation';
+import { Trophy, Medal, Award, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 interface LeaderboardEntry {
   user_id: string;
@@ -14,6 +16,8 @@ interface LeaderboardEntry {
 export default function Leaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchLeaderboard();
@@ -54,7 +58,6 @@ export default function Leaderboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navigation />
         <div className="container mx-auto px-4 py-8">
           <p>Loading leaderboard...</p>
         </div>
@@ -64,9 +67,11 @@ export default function Leaderboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-8">
+          <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Button>
           <Trophy className="h-8 w-8 text-primary" />
           <h1 className="text-4xl font-bold">Contribution Leaderboard</h1>
         </div>

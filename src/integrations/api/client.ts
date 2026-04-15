@@ -33,7 +33,6 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid - logout user
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_data');
       window.location.href = '/login';

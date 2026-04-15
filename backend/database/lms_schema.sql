@@ -1,5 +1,3 @@
--- Learning Management System - MySQL Schema
--- Converted from PostgreSQL/Supabase
 
 -- Create database
 CREATE DATABASE IF NOT EXISTS lms_db;
@@ -8,6 +6,10 @@ USE lms_db;
 -- Drop tables if they exist (for clean setup)
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS assignment_submissions;
+DROP TABLE IF EXISTS assignments;
+DROP TABLE IF EXISTS course_enrollments;
+DROP TABLE IF EXISTS courses;
 DROP TABLE IF EXISTS ai_chats;
 DROP TABLE IF EXISTS quiz_attempts;
 DROP TABLE IF EXISTS quiz_options;
@@ -150,6 +152,7 @@ CREATE TABLE challenges (
     title VARCHAR(255) NOT NULL,
     subject VARCHAR(255) NOT NULL,
     description TEXT,
+    duration INT DEFAULT 30 COMMENT 'Quiz duration in minutes',
     points_reward INT DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     start_date TIMESTAMP NULL,
@@ -265,6 +268,70 @@ CREATE TABLE shared_resources (
     FOREIGN KEY (session_id) REFERENCES session_requests(id) ON DELETE SET NULL,
     FOREIGN KEY (shared_by) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_session_resource (session_id)
+);
+
+-- Courses table (ER: USER Creates COURSE, USER Enrolls In COURSE)
+CREATE TABLE IF NOT EXISTS courses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    domain VARCHAR(255) NOT NULL,
+    description TEXT,
+    duration INT NOT NULL COMMENT 'Duration in hours',
+    created_by INT NOT NULL COMMENT 'Mentor who created the course',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_courses_created_by (created_by),
+    INDEX idx_courses_domain (domain),
+    INDEX idx_courses_active (is_active)
+);
+
+-- Course enrollments table (ER: USER m:n Enrolls In COURSE)
+CREATE TABLE IF NOT EXISTS course_enrollments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    course_id INT NOT NULL,
+    enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('active', 'completed', 'dropped') DEFAULT 'active',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_enrollment (user_id, course_id),
+    INDEX idx_enrollment_user (user_id),
+    INDEX idx_enrollment_course (course_id)
+);
+
+-- Assignments table (ER: COURSE 1:n Has ASSIGNMENT)
+CREATE TABLE IF NOT EXISTS assignments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    due_date TIMESTAMP NOT NULL,
+    total_marks INT DEFAULT 100,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    INDEX idx_assignment_course (course_id),
+    INDEX idx_assignment_due_date (due_date)
+);
+
+-- Assignment submissions table (ER: USER m:n Submits ASSIGNMENT)
+CREATE TABLE IF NOT EXISTS assignment_submissions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    assignment_id INT NOT NULL,
+    user_id INT NOT NULL,
+    submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    file_url VARCHAR(500),
+    pages INT COMMENT 'Number of pages submitted',
+    marks_obtained INT DEFAULT NULL,
+    status ENUM('submitted', 'reviewed', 'late') DEFAULT 'submitted',
+    feedback TEXT,
+    FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_submission (assignment_id, user_id),
+    INDEX idx_submission_assignment (assignment_id),
+    INDEX idx_submission_user (user_id)
 );
 
 -- AI Chats table

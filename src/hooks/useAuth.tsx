@@ -6,7 +6,7 @@ interface AuthContextType {
   user: AuthUser | null;
   session: AuthSession | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: any }>;
   register: (email: string, password: string, fullName: string, role?: 'student' | 'mentor') => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<AuthUser>) => Promise<{ success: boolean; error?: string }>;
@@ -45,12 +45,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     const checkAuth = async () => {
       try {
+        // Use cached user data first to avoid rate limiting
+        const cachedUser = authApi.getUser();
+        const token = authApi.getToken();
+        if (cachedUser && token) {
+          setUser(cachedUser);
+          setSession({ user: cachedUser, token });
+          setLoading(false);
+          // Refresh in background without blocking
+          authApi.getCurrentUser().then(response => {
+            if (response.user) {
+              setUser(response.user);
+              authApi.setAuthData(token, response.user);
+            }
+          }).catch(() => {});
+          return;
+        }
         const response = await authApi.getCurrentUser();
         if (response.user) {
           setUser(response.user);
           const token = authApi.getToken()!;
           setSession({ user: response.user, token });
-          // Update stored user data with fresh data
           authApi.setAuthData(token, response.user);
         }
       } catch (error) {
@@ -64,7 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string; user?: any }> => {
     try {
       const result = await authApi.login({ email, password });
 
@@ -72,7 +87,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(result.user);
         setSession({ user: result.user, token: result.token });
         authApi.setAuthData(result.token, result.user);
-        return { success: true };
+        return { success: true, user: result.user };
       } else {
         return { success: false, error: result.error || 'Login failed' };
       }

@@ -117,34 +117,28 @@ export default function SessionChat({ roomId }: SessionChatProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background rounded-lg border border-border overflow-hidden">
-      <div className="p-3 border-b border-border bg-muted/50">
-        <h3 className="font-semibold text-sm">Session Chat</h3>
+    <div className="flex flex-col h-full bg-white rounded-lg border border-gray-200 overflow-hidden" style={{ minHeight: '400px' }}>
+      <div className="p-3 border-b border-gray-200 bg-gray-50">
+        <h3 className="font-semibold text-sm text-gray-800">💬 Session Chat</h3>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-white">
         {messages.length === 0 && (
-          <p className="text-muted-foreground text-sm text-center py-4">
+          <p className="text-gray-400 text-sm text-center py-4">
             No messages yet. Start the conversation!
           </p>
         )}
 
         {messages.map((msg) => {
-          const isOwnMessage = msg.user_id === user?.id;
+          const isOwnMessage = String(msg.user_id) === String(user?.id);
           return (
-            <div
-              key={msg.id}
-              className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-lg px-3 py-2 ${isOwnMessage
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-foreground'
-                  }`}
-              >
+            <div key={msg.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[80%] rounded-lg px-3 py-2 ${isOwnMessage ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}>
+                {!isOwnMessage && msg.user_name && (
+                  <p className="text-xs font-medium text-gray-500 mb-1">{msg.user_name}</p>
+                )}
                 <p className="text-sm break-words">{msg.message}</p>
-                <p className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                  }`}>
+                <p className={`text-xs mt-1 ${isOwnMessage ? 'text-blue-200' : 'text-gray-400'}`}>
                   {formatTime(msg.created_at)}
                 </p>
               </div>
@@ -154,16 +148,11 @@ export default function SessionChat({ roomId }: SessionChatProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={sendMessage} className="p-3 border-t border-border">
+      <form onSubmit={sendMessage} className="p-3 border-t border-gray-200 bg-white">
         <div className="flex gap-2">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
-            disabled={sending}
-            className="flex-1"
-          />
-          <Button type="submit" size="icon" disabled={!newMessage.trim() || sending}>
+          <Input value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message..." disabled={sending} className="flex-1 text-gray-800" />
+          <Button type="submit" size="icon" disabled={!newMessage.trim() || sending} className="bg-blue-600 hover:bg-blue-700">
             <Send className="h-4 w-4" />
           </Button>
         </div>

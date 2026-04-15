@@ -7,8 +7,8 @@ const router = express.Router();
 
 // Validation rules
 const createProfileValidation = [
-  body('profile_name').trim().isLength({ min: 3, max: 255 }).withMessage('Profile name must be 3-255 characters'),
-  body('bio').trim().isLength({ min: 10, max: 1000 }).withMessage('Bio must be 10-1000 characters'),
+  body('profile_name').trim().isLength({ min: 2, max: 255 }).withMessage('Profile name must be at least 2 characters'),
+  body('bio').trim().isLength({ min: 5, max: 1000 }).withMessage('Bio must be at least 5 characters'),
   body('subjects').isArray({ min: 1 }).withMessage('At least one subject is required'),
   body('expertise_level').optional().isIn(['beginner', 'intermediate', 'advanced', 'expert']),
   body('hourly_rate').optional().isFloat({ min: 0 }).withMessage('Hourly rate must be a positive number')
@@ -64,6 +64,7 @@ router.post('/', authenticateToken, createProfileValidation, async (req, res) =>
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Mentor profile validation errors:', errors.array());
       return res.status(400).json({
         error: 'Validation failed',
         details: errors.array()

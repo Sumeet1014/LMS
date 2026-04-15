@@ -36,10 +36,10 @@ router.post('/sessions/:sessionId', submitFeedbackValidation, async (req, res) =
     const { rating, feedback_text } = req.body;
     const userId = req.user.id;
 
-    // Check if user participated in session and session is completed
+    // Accept both numeric session ID and video_room_id
     const sessions = await executeQuery(
-      'SELECT * FROM session_requests WHERE id = ? AND (mentor_id = ? OR student_id = ?) AND status = ?',
-      [sessionId, userId, userId, 'completed']
+      'SELECT * FROM session_requests WHERE (id = ? OR video_room_id = ?) AND (mentor_id = ? OR student_id = ?) AND status IN (?, ?)',
+      [sessionId, sessionId, userId, userId, 'completed', 'approved']
     );
 
     if (sessions.length === 0) {
@@ -47,25 +47,32 @@ router.post('/sessions/:sessionId', submitFeedbackValidation, async (req, res) =
     }
 
     const session = sessions[0];
+    const actualSessionId = session.id; // always use numeric ID
 
     // Check if feedback already exists
     const existingFeedback = await executeQuery(
       'SELECT id FROM session_feedback WHERE session_id = ? AND student_id = ?',
-      [sessionId, userId]
+      [actualSessionId, userId]
     );
 
     if (existingFeedback.length > 0) {
-      return res.status(400).json({ error: 'Feedback already submitted for this session' });
+      // Update existing feedback instead of blocking
+      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      await executeQuery(
+        'UPDATE session_feedback SET rating = ?, feedback_text = ?, updated_at = ? WHERE session_id = ? AND student_id = ?',
+        [rating, feedback_text || null, now, actualSessionId, userId]
+      );
+      return res.json({ feedback: { session_id: actualSessionId }, message: 'Feedback updated successfully' });
     }
 
     // Create feedback
-    const feedbackId = require('uuid').v4();
     const mentorId = session.mentor_id;
     const studentId = session.student_id;
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     await executeQuery(
-      'INSERT INTO session_feedback (id, session_id, mentor_id, student_id, rating, feedback_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [feedbackId, sessionId, mentorId, studentId, rating, feedback_text, new Date().toISOString().slice(0, 19).replace('T', ' '), new Date().toISOString().slice(0, 19).replace('T', ' ')]
+      'INSERT INTO session_feedback (session_id, mentor_id, student_id, rating, feedback_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [actualSessionId, mentorId, studentId, rating, feedback_text || null, now, now]
     );
 
     // Update mentor's average rating
@@ -79,7 +86,7 @@ router.post('/sessions/:sessionId', submitFeedbackValidation, async (req, res) =
     }
 
     res.status(201).json({
-      feedback: { id: feedbackId },
+      feedback: { session_id: actualSessionId },
       message: 'Feedback submitted successfully'
     });
   } catch (error) {

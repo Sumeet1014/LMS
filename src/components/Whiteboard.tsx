@@ -227,68 +227,40 @@ export default function Whiteboard({ roomId }: WhiteboardProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background rounded-lg border border-border overflow-hidden">
+    <div className="flex flex-col h-full rounded-lg border border-gray-600 overflow-hidden" style={{ minHeight: '400px' }}>
       {/* Toolbar */}
-      <div className="flex items-center gap-2 p-2 border-b border-border bg-muted/50">
-        <Button
-          variant={tool === 'pencil' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setTool('pencil')}
-        >
+      <div className="flex items-center gap-2 p-2 border-b border-gray-600 bg-gray-800 flex-wrap">
+        <Button variant={tool === 'pencil' ? 'default' : 'ghost'} size="sm" onClick={() => setTool('pencil')} className="text-white">
           <Pencil className="h-4 w-4" />
         </Button>
-        <Button
-          variant={tool === 'eraser' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setTool('eraser')}
-        >
+        <Button variant={tool === 'eraser' ? 'default' : 'ghost'} size="sm" onClick={() => setTool('eraser')} className="text-white">
           <Eraser className="h-4 w-4" />
         </Button>
-
-        <div className="w-px h-6 bg-border mx-1" />
-
+        <div className="w-px h-6 bg-gray-600 mx-1" />
         {colors.map(color => (
-          <button
-            key={color}
-            className={`w-6 h-6 rounded-full border-2 transition-transform ${strokeColor === color ? 'scale-110 border-primary' : 'border-transparent'
-              }`}
+          <button key={color}
+            className={`w-6 h-6 rounded-full border-2 transition-transform ${strokeColor === color ? 'scale-125 border-white' : 'border-gray-500'}`}
             style={{ backgroundColor: color }}
             onClick={() => setStrokeColor(color)}
           />
         ))}
-
-        <div className="w-px h-6 bg-border mx-1" />
-
-        <select
-          value={strokeWidth}
-          onChange={(e) => setStrokeWidth(Number(e.target.value))}
-          className="bg-background border border-border rounded px-2 py-1 text-sm"
-        >
+        <div className="w-px h-6 bg-gray-600 mx-1" />
+        <select value={strokeWidth} onChange={(e) => setStrokeWidth(Number(e.target.value))}
+          className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white">
           <option value={1}>Thin</option>
           <option value={2}>Medium</option>
           <option value={4}>Thick</option>
           <option value={8}>Extra Thick</option>
         </select>
-
         <div className="flex-1" />
-
         <Button variant="destructive" size="sm" onClick={handleClear}>
-          <Trash2 className="h-4 w-4 mr-1" />
-          Clear
+          <Trash2 className="h-4 w-4 mr-1" /> Clear
         </Button>
       </div>
-
       {/* Canvas */}
-      <canvas
-        ref={canvasRef}
-        className="flex-1 w-full cursor-crosshair touch-none"
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={endDrawing}
-        onMouseLeave={endDrawing}
-        onTouchStart={startDrawing}
-        onTouchMove={draw}
-        onTouchEnd={endDrawing}
+      <canvas ref={canvasRef} className="flex-1 w-full cursor-crosshair touch-none"
+        onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={endDrawing} onMouseLeave={endDrawing}
+        onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={endDrawing}
       />
     </div>
   );

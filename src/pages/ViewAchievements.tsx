@@ -34,13 +34,12 @@ export default function ViewAchievements() {
     try {
       const token = localStorage.getItem('auth_token');
       const response = await fetch(`${import.meta.env.VITE_API_URL}/profiles/user/${user.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to fetch profile');
-      const profileData = await response.json();
-      setProfile(profileData);
+      const data = await response.json();
+      // API returns { profile: {...} } or the profile directly
+      setProfile(data.profile || data);
     } catch (error: any) {
       toast({
         title: 'Error',

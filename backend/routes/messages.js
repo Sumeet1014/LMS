@@ -225,14 +225,21 @@ router.post('/whiteboard/:roomId', async (req, res) => {
 router.delete('/whiteboard/:roomId', async (req, res) => {
   try {
     const { roomId } = req.params;
-    await executeQuery(
-      'DELETE FROM whiteboard_strokes WHERE room_id = ?',
-      [roomId]
-    );
+    await executeQuery('DELETE FROM whiteboard_strokes WHERE room_id = ?', [roomId]);
     res.json({ success: true });
   } catch (error) {
-    console.error('Clear whiteboard error:', error);
     res.status(500).json({ error: 'Failed to clear whiteboard' });
+  }
+});
+
+// Clear video chat messages for room (called when session ends)
+router.delete('/video-chat/:roomId', async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    await executeQuery('DELETE FROM video_chat_messages WHERE room_id = ?', [roomId]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to clear chat' });
   }
 });
 

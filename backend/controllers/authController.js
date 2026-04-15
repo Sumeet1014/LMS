@@ -26,7 +26,8 @@ class AuthController {
         });
       }
 
-      const { email, password, fullName, role = 'student' } = req.body;
+      const { email, password, fullName, full_name, role = 'student' } = req.body;
+      const name = fullName || full_name || '';
 
       // Check if user already exists
       const existingUser = await User.findByEmail(email);
@@ -36,17 +37,19 @@ class AuthController {
       }
       console.log('User does not exist, proceeding with creation...');
 
+      const safeName = (name || email.split('@')[0]).trim();
+
       // Create user
       const user = await User.createUser({
         email,
         password,
-        full_name: fullName,
+        full_name: safeName,
         role
       });
 
       // Create profile
       await Profile.upsertProfile(user.id, {
-        username: fullName.toLowerCase().replace(/\s+/g, '_'),
+        username: safeName.toLowerCase().replace(/\s+/g, '_'),
         credits: 0,
         contribution_score: 0,
         total_sessions_attended: 0,
@@ -189,10 +192,7 @@ class AuthController {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({
-          error: 'Validation failed',
-          details: errors.array()
-        });
+        return res.status(400).json({ error: 'Validation failed', details: errors.array() });
       }
 
       const { username, bio, college_email, subjects, availability } = req.body;
@@ -201,26 +201,61 @@ class AuthController {
       // Update user role to mentor
       await User.updateRole(userId, 'mentor');
 
-      // Update profile with mentor information
+      // Update profile
       await Profile.upsertProfile(userId, {
         username,
         bio,
         college_email,
-        subjects,
-        availability,
         is_mentor: true
       });
 
-      // Get updated user with profile
-      const userWithProfile = await User.getUserWithProfile(userId);
+      // Get profile id
+      const { executeQuery } = require('../config/db');
+      const profileRows = await executeQuery('SELECT id FROM profiles WHERE user_id = ?', [userId]);
+      const profileId = profileRows[0]?.id;
 
-      res.json({
-        user: userWithProfile,
-        message: 'Successfully became a mentor'
-      });
+      if (profileId) {
+        // Save subjects to profile_subjects
+        if (Array.isArray(subjects) && subjects.length > 0) {
+          // Get subject IDs from names
+          for (const subjectName of subjects) {
+            const subjectRows = await executeQuery('SELECT id FROM subjects WHERE name = ?', [subjectName]);
+            if (subjectRows.length > 0) {
+              await executeQuery(
+                'INSERT IGNORE INTO profile_subjects (profile_id, subject_id) VALUES (?, ?)',
+                [profileId, subjectRows[0].id]
+              );
+            } else {
+              // Insert new subject if not exists
+              const newSubject = await executeQuery('INSERT INTO subjects (name) VALUES (?)', [subjectName]);
+              await executeQuery(
+                'INSERT IGNORE INTO profile_subjects (profile_id, subject_id) VALUES (?, ?)',
+                [profileId, newSubject.insertId]
+              );
+            }
+          }
+        }
+
+        // Save availability slots to profile_availability
+        if (Array.isArray(availability) && availability.length > 0) {
+          // Clear old slots first
+          await executeQuery('DELETE FROM profile_availability WHERE profile_id = ?', [profileId]);
+          for (const slot of availability) {
+            if (slot.day && slot.start_time && slot.end_time) {
+              await executeQuery(
+                'INSERT INTO profile_availability (profile_id, day, start_time, end_time) VALUES (?, ?, ?, ?)',
+                [profileId, slot.day, slot.start_time, slot.end_time]
+              );
+            }
+          }
+        }
+      }
+
+      const userWithProfile = await User.getUserWithProfile(userId);
+      res.json({ success: true, user: userWithProfile, message: 'Successfully became a mentor' });
+
     } catch (error) {
       console.error('Become mentor error:', error);
-      console.log('Full error stack:', error.stack);
       res.status(500).json({ error: 'Failed to become mentor', details: error.message });
     }
   }

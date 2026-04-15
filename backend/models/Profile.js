@@ -8,33 +8,17 @@ class Profile extends BaseModel {
   // Create or update profile (allows multiple mentors per user)
   async upsertProfile(userId, profileData) {
     const data = { ...profileData };
-    if (data.subjects) {
-      data.subjects = typeof data.subjects === 'string' ? data.subjects : JSON.stringify(data.subjects);
-    }
-    if (data.subject_ids) {
-      data.subject_ids = typeof data.subject_ids === 'string' ? data.subject_ids : JSON.stringify(data.subject_ids);
-    }
-    if (data.availability) {
-      // For JSON column, even a plain string must be double-quoted to be valid JSON
-      // If it's already a string, we check if it starts with { or [ or "
-      const isJson = typeof data.availability === 'string' &&
-        (data.availability.startsWith('{') ||
-          data.availability.startsWith('[') ||
-          data.availability.startsWith('"'));
-
-      if (!isJson) {
-        data.availability = JSON.stringify(data.availability);
-      }
-    }
+    // Remove columns that no longer exist in profiles table
+    delete data.subjects;
+    delete data.subject_ids;
+    delete data.availability;
 
     // Check if user already has any mentor profiles
     const existingProfiles = await this.findByUserId(userId);
     
     if (existingProfiles && existingProfiles.length > 0) {
-      // Update existing profile instead of creating new one
-     return await this.updateByUserId(userId, data);
+      return await this.updateByUserId(userId, data);
     } else {
-      // Create first mentor profile
       return await this.create({ user_id: userId, ...data });
     }
   }
@@ -61,19 +45,18 @@ class Profile extends BaseModel {
     return await this.updateByUserId(userId, { is_mentor: isMentor });
   }
 
-  // Update subjects
+  // Update subjects (now handled via profile_subjects table)
   async updateSubjects(userId, subjects, subjectIds) {
-    return await this.updateByUserId(userId, {
-      subjects: JSON.stringify(subjects),
-      subject_ids: JSON.stringify(subjectIds)
-    });
+    // subjects are now stored in profile_subjects table
+    // kept for backward compatibility
+    return Promise.resolve();
   }
 
-  // Update availability
+  // Update availability (now handled via profile_availability table)
   async updateAvailability(userId, availability) {
-    return await this.updateByUserId(userId, {
-      availability: JSON.stringify(availability)
-    });
+    // availability is now stored in profile_availability table
+    // kept for backward compatibility
+    return Promise.resolve();
   }
 
   // Update rating
@@ -181,14 +164,16 @@ class Profile extends BaseModel {
       SELECT p.*, u.email, u.full_name
       FROM profiles p
       INNER JOIN users u ON p.user_id = u.id
+      INNER JOIN profile_subjects ps ON p.id = ps.profile_id
+      INNER JOIN subjects s ON ps.subject_id = s.id
       WHERE p.is_mentor = true 
         AND u.role = 'mentor'
-        AND (JSON_CONTAINS(p.subjects, ?) OR JSON_CONTAINS(p.subject_ids, ?))
+        AND s.name LIKE ?
       ORDER BY p.rating DESC
       LIMIT ?
     `;
 
-    return await this.query(query, [JSON.stringify(subject), JSON.stringify(subject), limit]);
+    return await this.query(query, [`%${subject}%`, limit]);
   }
 }
 
