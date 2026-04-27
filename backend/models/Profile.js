@@ -100,6 +100,7 @@ class Profile extends BaseModel {
       SELECT p.*, u.username, u.full_name
       FROM profiles p
       INNER JOIN users u ON p.user_id = u.id
+      WHERE u.role = 'student'
       ORDER BY p.contribution_score DESC
       LIMIT ?
     `;

@@ -5,6 +5,32 @@ const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://
 
 // Singleton — survives HMR hot reloads
 let globalSocket: Socket | null = null;
+let globalSocketToken: string | null = null;
+
+function getOrCreateSocket(): Socket {
+    const token = localStorage.getItem('auth_token');
+
+    // If token changed (different user logged in), disconnect old socket
+    if (globalSocket && globalSocketToken !== token) {
+        globalSocket.disconnect();
+        globalSocket = null;
+        globalSocketToken = null;
+    }
+
+    if (!globalSocket) {
+        globalSocketToken = token;
+        globalSocket = io(SOCKET_URL, {
+            transports: ['websocket'],
+            autoConnect: true,
+            reconnection: true,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+            auth: { token }
+        });
+    }
+
+    return globalSocket;
+}
 
 export function useSocket(roomId?: string) {
     const [isConnected, setIsConnected] = useState(() => globalSocket?.connected ?? false);
@@ -13,19 +39,7 @@ export function useSocket(roomId?: string) {
     useEffect(() => { roomIdRef.current = roomId; }, [roomId]);
 
     useEffect(() => {
-        if (!globalSocket) {
-            const token = localStorage.getItem('auth_token');
-            globalSocket = io(SOCKET_URL, {
-                transports: ['websocket'],
-                autoConnect: true,
-                reconnection: true,
-                reconnectionAttempts: 10,
-                reconnectionDelay: 1000,
-                auth: { token }
-            });
-        }
-
-        const socket = globalSocket;
+        const socket = getOrCreateSocket();
 
         const onConnect = () => {
             setIsConnected(true);

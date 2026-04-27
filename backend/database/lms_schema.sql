@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS assignments;
 DROP TABLE IF EXISTS course_enrollments;
 DROP TABLE IF EXISTS courses;
 DROP TABLE IF EXISTS ai_chats;
+DROP TABLE IF EXISTS session_messages;
 DROP TABLE IF EXISTS quiz_attempts;
 DROP TABLE IF EXISTS quiz_options;
 DROP TABLE IF EXISTS quiz_questions;
@@ -334,9 +335,23 @@ CREATE TABLE IF NOT EXISTS assignment_submissions (
     INDEX idx_submission_user (user_id)
 );
 
+-- Session messages table (for real-time chat)
+CREATE TABLE session_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    session_id INT NOT NULL,
+    user_id INT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES session_requests(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_session_messages (session_id),
+    INDEX idx_user_messages (user_id),
+    INDEX idx_created_at (created_at)
+);
+
 -- AI Chats table
 CREATE TABLE ai_chats (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id VARCHAR(36) PRIMARY KEY,
     user_id INT NOT NULL,
     session_id INT,
     user_message TEXT NOT NULL,

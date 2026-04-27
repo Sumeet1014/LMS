@@ -36,16 +36,20 @@ export default function UpcomingSessions() {
   const fetchUpcomingSessions = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const [upcomingRes, historyRes] = await Promise.all([
+      const [upcomingRes, historyRes, rejectedRes] = await Promise.all([
         fetch(`${import.meta.env.VITE_API_URL}/sessions/upcoming`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${import.meta.env.VITE_API_URL}/sessions?status=completed`, { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${import.meta.env.VITE_API_URL}/sessions?status=completed`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${import.meta.env.VITE_API_URL}/sessions?status=rejected`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       const upcoming = upcomingRes.ok ? (await upcomingRes.json()).sessions || [] : [];
       const completed = historyRes.ok ? (await historyRes.json()).sessions?.slice(0, 3) || [] : [];
+      const rejected = rejectedRes.ok ? (await rejectedRes.json()).sessions?.slice(0, 3) || [] : [];
       // Deduplicate by id
       const seen = new Set(upcoming.map((s: any) => s.id));
       const uniqueCompleted = completed.filter((s: any) => !seen.has(s.id));
-      setSessions([...upcoming, ...uniqueCompleted]);
+      rejected.forEach((s: any) => seen.add(s.id));
+      const uniqueRejected = rejected.filter((s: any) => !seen.has(s.id));
+      setSessions([...upcoming, ...uniqueCompleted, ...uniqueRejected]);
     } catch (error) {
       console.error('Error fetching sessions:', error);
     } finally {
@@ -239,6 +243,14 @@ export default function UpcomingSessions() {
                 )}
                 {session.status === 'pending' && user?.id !== String(session.mentor_id) && (
                   <span className="text-xs text-muted-foreground">Waiting for mentor to approve...</span>
+                )}
+                {session.status === 'rejected' && (
+                  <div className="flex-1 flex flex-col gap-1 py-1">
+                    <span className="text-xs text-red-500 font-medium">❌ Session Rejected by Mentor</span>
+                    {session.rejection_reason && (
+                      <span className="text-xs text-muted-foreground">Reason: {session.rejection_reason}</span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

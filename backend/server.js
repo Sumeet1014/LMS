@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
+const session = require('express-session');
 require('dotenv').config();
 
 const app = express();
@@ -31,6 +32,19 @@ app.use(cors({
   origin: allowedOrigins,
   credentials: true
 }));
+
+// Session (required for passport)
+app.use(session({
+  secret: process.env.JWT_SECRET || 'session_secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false }
+}));
+
+// Passport
+const { router: googleAuthRouter, passport } = require('./routes/googleAuth');
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Rate limiting — relaxed for development
 const limiter = rateLimit({
@@ -70,6 +84,7 @@ const courseRoutes = require('./routes/courses');
 
 // Mount routes
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/auth/google', googleAuthRouter);
 app.use('/api/users', userRoutes);
 app.use('/api/profiles', profileRoutes);
 app.use('/api/mentor-profiles', mentorProfileRoutes);
@@ -118,6 +133,13 @@ io.on('connection', (socket) => {
     console.log(`User ${socket.userId} joined session-${sessionId}`);
     // Notify others in the room that a peer joined
     socket.to(`session-${sessionId}`).emit('peer-joined', { userId: socket.userId });
+    // Also tell the joining user how many others are already in the room
+    const room = io.sockets.adapter.rooms.get(`session-${sessionId}`);
+    const othersCount = room ? room.size - 1 : 0;
+    if (othersCount > 0) {
+      // Notify the new joiner that peers are already present (so student can trigger offer too)
+      socket.emit('peer-already-present', { count: othersCount });
+    }
   });
 
   // Handle chat messages

@@ -27,6 +27,7 @@ import Challenges from "./pages/Challenges";
 import Leaderboard from "./pages/Leaderboard";
 import VideoRoom from "./pages/VideoRoom";
 import CertificateViewer from "./pages/CertificateViewer";
+import GoogleAuthSuccess from './pages/GoogleAuthSuccess';
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/login/legacy" element={<Login />} />
             <Route path="/certificate/:shareToken" element={<CertificateViewer />} />
             <Route path="/room/:roomId" element={<VideoRoom />} />
+            <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
 
             {/* Student-only routes */}
             <Route path="/student/dashboard" element={<RequireRole role="student"><StudentDashboardPage /></RequireRole>} />

@@ -9,16 +9,16 @@ import { useAuth } from '@/hooks/useAuth';
 import UpcomingSessions from '@/components/UpcomingSessions';
 
 const SUBJECT_CATEGORIES = [
-  { id: 'dsa', label: 'DSA', icon: '🧮', color: '#6366f1' },
-  { id: 'dbms', label: 'Databases', icon: '🗄️', color: '#10b981' },
-  { id: 'networks', label: 'Networks', icon: '🌐', color: '#3b82f6' },
-  { id: 'operating-systems', label: 'OS', icon: '💻', color: '#f59e0b' },
-  { id: 'java', label: 'Java', icon: '☕', color: '#ef4444' },
-  { id: 'oops', label: 'OOPs', icon: '🔷', color: '#8b5cf6' },
-  { id: 'system-design', label: 'System Design', icon: '🏗️', color: '#06b6d4' },
-  { id: 'competitive-coding', label: 'Competitive', icon: '🏆', color: '#f97316' },
-  { id: 'c', label: 'C / C++', icon: '⚙️', color: '#64748b' },
-  { id: 'project-development', label: 'Projects & Git', icon: '🚀', color: '#84cc16' },
+  { id: 'dsa', label: 'DSA', icon: '🧮', color: '#6366f1', keywords: ['dsa', 'data structure', 'algorithm'] },
+  { id: 'dbms', label: 'Databases', icon: '🗄️', color: '#10b981', keywords: ['database', 'dbms', 'sql', 'mysql', 'db'] },
+  { id: 'networks', label: 'Networks', icon: '🌐', color: '#3b82f6', keywords: ['network', 'computer network', 'cn'] },
+  { id: 'operating-systems', label: 'OS', icon: '💻', color: '#f59e0b', keywords: ['os', 'operating system'] },
+  { id: 'java', label: 'Java', icon: '☕', color: '#ef4444', keywords: ['java'] },
+  { id: 'oops', label: 'OOPs', icon: '🔷', color: '#8b5cf6', keywords: ['oops', 'object oriented', 'oop'] },
+  { id: 'system-design', label: 'System Design', icon: '🏗️', color: '#06b6d4', keywords: ['system design'] },
+  { id: 'competitive-coding', label: 'Competitive', icon: '🏆', color: '#f97316', keywords: ['competitive', 'coding', 'cp'] },
+  { id: 'c', label: 'C / C++', icon: '⚙️', color: '#64748b', keywords: ['c++', 'c/', 'c / c', 'cpp', ' c '] },
+  { id: 'project-development', label: 'Projects & Git', icon: '🚀', color: '#84cc16', keywords: ['project', 'git', 'github'] },
 ];
 
 export default function StudentDashboard({ profile }: { profile: any }) {
@@ -38,7 +38,7 @@ export default function StudentDashboard({ profile }: { profile: any }) {
       .then(d => { if (d?.certificates) setCertCount(d.certificates.length); });
   }, []);
 
-  const fetchMentorsBySubject = async (subjectLabel: string) => {
+  const fetchMentorsBySubject = async (subject: typeof SUBJECT_CATEGORIES[0]) => {
     setLoadingMentors(true);
     try {
       const token = localStorage.getItem('auth_token');
@@ -51,11 +51,13 @@ export default function StudentDashboard({ profile }: { profile: any }) {
         ...m,
         subjects: typeof m.subjects === 'string' ? JSON.parse(m.subjects) : (m.subjects || [])
       }));
-      // Filter by subject
+      // Filter by keywords — strict match, no fallback to all
       const filtered = all.filter((m: any) =>
-        m.subjects?.some((s: string) => s.toLowerCase().includes(subjectLabel.toLowerCase()))
+        m.subjects?.some((s: string) =>
+          subject.keywords.some(kw => s.toLowerCase().includes(kw.toLowerCase()))
+        )
       );
-      setMentors(filtered.length > 0 ? filtered : all);
+      setMentors(filtered);
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     } finally {
@@ -65,7 +67,7 @@ export default function StudentDashboard({ profile }: { profile: any }) {
 
   const handleSubjectClick = (subject: typeof SUBJECT_CATEGORIES[0]) => {
     setSelectedSubject(subject.label);
-    fetchMentorsBySubject(subject.label);
+    fetchMentorsBySubject(subject);
   };
 
   const handleRequestSession = async (mentorId: any) => {

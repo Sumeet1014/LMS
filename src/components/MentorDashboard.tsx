@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Calendar, Users, Award, Star, PlusCircle, FileText, Check, Video, BookOpen, Clock, Send } from 'lucide-react';
+import { Calendar, Users, Award, Star, PlusCircle, FileText, Check, X, Video, BookOpen, Clock, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +16,8 @@ export default function MentorDashboard({ profile }: { profile: any }) {
   const [pendingSessions, setPendingSessions] = useState<any[]>([]);
   const [approvedSessions, setApprovedSessions] = useState<any[]>([]);
   const [approvingId, setApprovingId] = useState<number | null>(null);
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
   const [showCreateSession, setShowCreateSession] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [sessionForm, setSessionForm] = useState({ student_id: '', title: '', requested_time: '', duration: 60 });
@@ -119,6 +121,28 @@ export default function MentorDashboard({ profile }: { profile: any }) {
     }
   };
 
+  const rejectSession = async (sessionId: number) => {
+    setRejectingId(sessionId);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const reason = rejectReason[sessionId] || 'Enrollment is full or slot unavailable.';
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/sessions/${sessionId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: 'rejected', rejection_reason: reason })
+      });
+      if (res.ok) {
+        toast({ title: 'Session Rejected', description: 'Student has been notified.' });
+        setRejectReason(prev => { const n = { ...prev }; delete n[sessionId]; return n; });
+        loadSessions();
+      }
+    } catch (e) {
+      toast({ title: 'Error', description: 'Failed to reject session', variant: 'destructive' });
+    } finally {
+      setRejectingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
 
@@ -212,12 +236,28 @@ export default function MentorDashboard({ profile }: { profile: any }) {
                     <p className="text-sm font-medium">{s.title}</p>
                     <p className="text-xs text-muted-foreground">Student: {s.student_name || 'Unknown'}</p>
                     <p className="text-xs text-muted-foreground">{new Date(s.requested_time).toLocaleString()}</p>
-                    <Button size="sm" className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white h-7 text-xs"
-                      disabled={approvingId === s.id}
-                      onClick={() => approveSession(s.id)}>
-                      <Check className="mr-1 h-3 w-3" />
-                      {approvingId === s.id ? 'Approving...' : 'Approve Session'}
-                    </Button>
+                    <div className="mt-2 space-y-2">
+                      <Input
+                        placeholder="Rejection reason (optional)"
+                        className="h-7 text-xs"
+                        value={rejectReason[s.id] || ''}
+                        onChange={e => setRejectReason(prev => ({ ...prev, [s.id]: e.target.value }))}
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 text-white h-7 text-xs"
+                          disabled={approvingId === s.id}
+                          onClick={() => approveSession(s.id)}>
+                          <Check className="mr-1 h-3 w-3" />
+                          {approvingId === s.id ? 'Approving...' : 'Approve'}
+                        </Button>
+                        <Button size="sm" className="flex-1 bg-red-500 hover:bg-red-600 text-white h-7 text-xs"
+                          disabled={rejectingId === s.id}
+                          onClick={() => rejectSession(s.id)}>
+                          <X className="mr-1 h-3 w-3" />
+                          {rejectingId === s.id ? 'Rejecting...' : 'Reject'}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ))}
                 {pendingSessions.length > 3 && (

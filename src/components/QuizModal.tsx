@@ -323,11 +323,16 @@ export default function QuizModal({
                 <Button
                   onClick={handleSubmit}
                   disabled={submitting || Object.keys(answers).length < questions.length}
+                  className="bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-200 dark:hover:bg-slate-300 dark:text-slate-900"
                 >
                   {submitting ? 'Submitting...' : 'Submit Quiz'}
                 </Button>
               ) : (
-                <Button onClick={handleNext} disabled={!answers[question?.id]}>
+                <Button 
+                  onClick={handleNext} 
+                  disabled={!answers[question?.id]}
+                  className="bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-200 dark:hover:bg-slate-300 dark:text-slate-900"
+                >
                   Next
                 </Button>
               )}

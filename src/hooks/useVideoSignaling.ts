@@ -31,11 +31,19 @@ export function useVideoSignaling(
       onPeerJoinedRef.current?.();
     };
 
+    const handlePeerAlreadyPresent = (data: any) => {
+      console.log('Peer already in room:', data);
+      // Trigger offer — handles case where mentor joins after student
+      onPeerJoinedRef.current?.();
+    };
+
     on('signal', handleSignal);
     on('peer-joined', handlePeerJoined);
+    on('peer-already-present', handlePeerAlreadyPresent);
     return () => {
       off('signal', handleSignal);
       off('peer-joined', handlePeerJoined);
+      off('peer-already-present', handlePeerAlreadyPresent);
     };
   }, [on, off]);
 

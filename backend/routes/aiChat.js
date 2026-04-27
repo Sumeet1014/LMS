@@ -14,6 +14,8 @@ router.post('/', async (req, res) => {
     const { sessionId, message, use_ai } = req.body;
     const userId = req.user.id;
 
+    console.log('AI Chat Request:', { use_ai, aiProvider: process.env.AI_PROVIDER, message: message.substring(0, 50) });
+
     if (!message || !message.toString().trim()) {
       return res.status(400).json({ error: 'empty_message' });
     }
@@ -33,9 +35,15 @@ router.post('/', async (req, res) => {
     let assistant = '';
     let source = 'local';
 
-    // Check if AI is configured and use_ai is true
+    // Use AI whenever provider is configured (ignore use_ai flag if AI is set up)
     const aiProvider = process.env.AI_PROVIDER || 'local';
-    const useAI = use_ai && aiProvider !== 'local';
+    const hasGeminiKey = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here';
+    const hasOpenAIKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_api_key_here';
+    const aiConfigured = (aiProvider === 'gemini' && hasGeminiKey) || (aiProvider === 'openai' && hasOpenAIKey);
+    // Always use AI if configured; use_ai from client is just a hint
+    const useAI = aiConfigured || (use_ai && aiProvider !== 'local');
+
+    console.log('AI Processing:', { use_ai, aiProvider, useAI });
 
     if (useAI) {
       try {
@@ -44,43 +52,72 @@ router.post('/', async (req, res) => {
         // Load recent messages for context
         let contextMessages = [];
         if (sessionId) {
-          const recent = await executeQuery(
-            `SELECT user_id, content, created_at
-             FROM session_messages
-             WHERE session_id = ?
-             ORDER BY created_at DESC LIMIT 6`,
-            [sessionId]
-          );
-          
-          contextMessages = recent.reverse().map(r => r.content);
+          try {
+            const recent = await executeQuery(
+              `SELECT user_id, content, created_at
+               FROM session_messages
+               WHERE session_id = ?
+               ORDER BY created_at DESC LIMIT 6`,
+              [sessionId]
+            );
+            
+            contextMessages = recent.reverse().map(r => r.content);
+          } catch (e) {
+            console.warn('Failed to load session context:', e.message);
+            // Continue without context if table doesn't exist
+          }
         }
 
         if (aiProvider === 'gemini') {
           // Google Gemini API
           const geminiKey = process.env.GEMINI_API_KEY;
+          console.log('Gemini API Key exists:', !!geminiKey);
+          console.log('Gemini API Key valid:', geminiKey && geminiKey !== 'your_gemini_api_key_here');
+          
           if (geminiKey && geminiKey !== 'your_gemini_api_key_here') {
-            const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+            const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
             const prompt = `${systemPrompt}\n\nContext: ${contextMessages.join('\n')}\n\nUser: ${message}\n\nAssistant:`;
             
-            const geminiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{
-                  parts: [{ text: prompt }]
-                }],
-                generationConfig: {
-                  temperature: 0.2,
-                  maxOutputTokens: 400
-                }
-              })
-            });
+            console.log('Calling Gemini API with model:', model);
+            
+            try {
+              const geminiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{
+                    parts: [{ text: prompt }]
+                  }],
+                  generationConfig: {
+                    temperature: 0.2,
+                    maxOutputTokens: 400
+                  }
+                })
+              });
 
-            if (geminiResp.ok) {
-              const data = await geminiResp.json();
-              assistant = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-              source = 'gemini';
+              console.log('Gemini API response status:', geminiResp.status);
+
+              if (geminiResp.ok) {
+                const data = await geminiResp.json();
+                console.log('Gemini API success:', !!data.candidates?.[0]?.content?.parts?.[0]?.text);
+                assistant = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+                if (assistant) {
+                  source = 'gemini';
+                  console.log('Using Gemini response');
+                } else {
+                  console.warn('Gemini returned empty response, falling back to local');
+                }
+              } else {
+                const error = await geminiResp.text();
+                console.error('Gemini API error:', geminiResp.status, error);
+                console.log('Falling back to local response due to API error');
+              }
+            } catch (e) {
+              console.error('Gemini API request failed:', e.message);
+              console.log('Falling back to local response due to network error');
             }
+          } else {
+            console.warn('Gemini API key not configured, using local response');
           }
         } else if (aiProvider === 'openai') {
           // OpenAI API
@@ -92,29 +129,36 @@ router.post('/', async (req, res) => {
               { role: 'user', content: message }
             ];
 
-            const openaiResp = await fetch('https://api.openai.com/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${openaiKey}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-                messages,
-                max_tokens: 400,
-                temperature: 0.2
-              })
-            });
+            try {
+              const openaiResp = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${openaiKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+                  messages,
+                  max_tokens: 400,
+                  temperature: 0.2
+                })
+              });
 
-            if (openaiResp.ok) {
-              const data = await openaiResp.json();
-              assistant = data.choices?.[0]?.message?.content?.trim() || '';
-              source = 'openai';
+              if (openaiResp.ok) {
+                const data = await openaiResp.json();
+                assistant = data.choices?.[0]?.message?.content?.trim() || '';
+                source = 'openai';
+              } else {
+                const error = await openaiResp.text();
+                console.warn('OpenAI API error:', openaiResp.status, error);
+              }
+            } catch (e) {
+              console.warn('OpenAI API request failed:', e.message);
             }
           }
         }
       } catch (e) {
-        console.warn('AI API failed, falling back to local responses:', e.message);
+        console.warn('AI API processing failed, falling back to local responses:', e.message);
       }
     }
 
@@ -143,12 +187,14 @@ router.post('/', async (req, res) => {
     // Save chat to database
     try {
       const chatId = uuidv4();
+      const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
       await executeQuery(
         'INSERT INTO ai_chats (id, session_id, user_id, user_message, assistant_reply, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [chatId, sessionId || null, userId, message, assistant, source, new Date().toISOString().slice(0, 19).replace('T', ' ')]
+        [chatId, sessionId || null, userId, message, assistant, source, timestamp]
       );
     } catch (e) {
-      console.warn('ai_chats save failed', e.message || e);
+      console.warn('Failed to save chat to database:', e.message || e);
+      // Don't fail the request if database save fails - still return the response
     }
 
     return res.json({ reply: assistant, source });

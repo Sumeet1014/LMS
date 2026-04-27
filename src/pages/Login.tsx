@@ -170,8 +170,8 @@ export default function Login() {
         setError('Please fill in all fields.');
         return;
       }
-      if (suPassword.length < 6) {
-        setError('Password must be at least 6 characters.');
+      if (suPassword.length < 8) {
+        setError('Password must be at least 8 characters.');
         return;
       }
       setLoading(true);

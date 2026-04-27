@@ -127,21 +127,23 @@ export default function ViewAchievements() {
             </CardContent>
           </Card>
 
-          {/* Certificates Section */}
-          <Card className="card-clean">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Star className="h-6 w-6 text-primary" />
-                Certificates Earned
-              </CardTitle>
-              <CardDescription>
-                Complete quizzes to earn certificates
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {user && <BadgeDisplay userId={user.id} />}
-            </CardContent>
-          </Card>
+          {/* Certificates Section — only for students */}
+          {user?.role !== 'mentor' && (
+            <Card className="card-clean">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-6 w-6 text-primary" />
+                  Certificates Earned
+                </CardTitle>
+                <CardDescription>
+                  Complete quizzes to earn certificates
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {user && <BadgeDisplay userId={user.id} />}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
     </div>

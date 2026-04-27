@@ -23,7 +23,7 @@ export default function AIChatBot({ sessionId, className = '' }: AIChatBotProps)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
-      text: '👋 Hi! I\'m StudyBot. Ask me about study tips, challenges, or badges!\n\n💡 Tip: I use smart local responses to save credits. Click the ✨ button for AI-powered replies.',
+      text: '👋 Hi! I\'m StudyBot powered by Gemini AI! Ask me anything about study tips, courses, scheduling, or the platform.\n\n💡 AI mode is ON by default for smart responses.',
       sender: 'bot',
       timestamp: new Date(),
       source: 'system'
@@ -31,7 +31,7 @@ export default function AIChatBot({ sessionId, className = '' }: AIChatBotProps)
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [useAI, setUseAI] = useState(false);
+  const [useAI, setUseAI] = useState(true);
   const { toast } = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -144,16 +144,16 @@ export default function AIChatBot({ sessionId, className = '' }: AIChatBotProps)
             onClick={() => {
               setUseAI(!useAI);
               toast({
-                title: useAI ? '🔋 Credits Saved Mode' : '✨ AI Mode',
+                title: useAI ? '🔋 Local Mode' : '✨ AI Mode',
                 description: useAI
-                  ? 'Using smart local responses (free)'
-                  : 'Using OpenAI for better responses (uses credits)'
+                  ? 'Switched to local responses (free, no API)'
+                  : 'Switched to Gemini AI for smart responses'
               });
             }}
             className="gap-1"
           >
             <Sparkles className="w-4 h-4" />
-            {useAI ? 'AI' : 'Local'}
+            {useAI ? '✨ AI' : '🔋 Local'}
           </Button>
           <Button size="sm" variant="ghost" onClick={clearChat}>
             <Trash2 className="w-4 h-4" />
@@ -221,7 +221,7 @@ export default function AIChatBot({ sessionId, className = '' }: AIChatBotProps)
           </Button>
         </form>
         <p className="text-xs text-muted-foreground mt-2 text-center">
-          {useAI ? '✨ AI mode active (uses credits)' : '🔋 Smart local mode (free)'}
+          {useAI ? '✨ Gemini AI mode active' : '🔋 Local mode (no AI)'}
         </p>
       </div>
     </Card>
