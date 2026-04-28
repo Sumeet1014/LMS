@@ -53,6 +53,28 @@ CREATE TABLE subjects (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Profile Subjects (many-to-many: profiles <-> subjects)
+CREATE TABLE profile_subjects (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    profile_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_profile_subject (profile_id, subject_id),
+    INDEX idx_profile (profile_id),
+    INDEX idx_subject (subject_id)
+);
+
+-- Profile Availability slots
+CREATE TABLE profile_availability (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    profile_id INT NOT NULL,
+    day VARCHAR(20) NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_profile (profile_id)
+);
+
 -- Profiles table (extended user information)
 CREATE TABLE profiles (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -77,6 +99,11 @@ CREATE TABLE profiles (
     INDEX idx_mentor (is_mentor),
     INDEX idx_user_id (user_id)
 );
+
+-- Add foreign keys for profile_subjects and profile_availability (after profiles table exists)
+ALTER TABLE profile_subjects ADD CONSTRAINT fk_ps_profile FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE;
+ALTER TABLE profile_subjects ADD CONSTRAINT fk_ps_subject FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE;
+ALTER TABLE profile_availability ADD CONSTRAINT fk_pa_profile FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE;
 
 -- Session requests table
 CREATE TABLE session_requests (
