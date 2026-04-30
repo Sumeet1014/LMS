@@ -60,7 +60,10 @@ passport.deserializeUser(async (id, done) => {
 });
 
 // Step 1 — Redirect to Google
-router.get('/', passport.authenticate('google', {
+router.get('/', (req, res, next) => {
+  console.log('Google OAuth initiated, callback URL:', process.env.GOOGLE_CALLBACK_URL);
+  next();
+}, passport.authenticate('google', {
   scope: ['profile', 'email'],
   prompt: 'select_account'
 }));

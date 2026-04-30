@@ -10,6 +10,7 @@ const session = require('express-session');
 require('dotenv').config();
 
 const app = express();
+app.set('trust proxy', 1); // Required for Railway/Render reverse proxy
 app.use(morgan('dev'));
 
 const server = createServer(app);
