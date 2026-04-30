@@ -79,49 +79,59 @@ class AuthController {
   }
 
   // User login
-  async login(req, res) {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        console.log('Login validation failed:', errors.array());
-        return res.status(400).json({
-          error: 'Validation failed',
-          details: errors.array()
-        });
-      }
-
-      const { email, password } = req.body;
-
-      // Verify user credentials
-      const user = await User.verifyPassword(email, password);
-      if (!user) {
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-
-      // Generate token
-      const token = generateToken(user.id);
-
-      // Get user with profile
-      const userWithProfile = await User.getUserWithProfile(user.id);
-
-      // Return user data without password
-      const { password_hash: _, ...userWithoutPassword } = userWithProfile;
-
-      res.json({
-        success: true,
-        user: {
-          ...userWithoutPassword,
-          name: userWithoutPassword.full_name
-        },
-        token,
-        message: 'Login successful'
+  // User login
+async login(req, res) {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log('Login validation failed:', errors.array());
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: errors.array()
       });
-    } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ error: 'Login failed' });
     }
-  }
 
+    const { email, password } = req.body;
+
+    // Verify user credentials
+    const user = await User.verifyPassword(email, password);
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Generate token
+    const token = generateToken(user.id);
+
+    // Get user with profile
+    const userWithProfile = await User.getUserWithProfile(user.id);
+
+    // Remove password from response
+    const { password_hash: _, ...userWithoutPassword } = userWithProfile;
+
+    res.json({
+      success: true,
+      user: {
+        ...userWithoutPassword,
+        name: userWithoutPassword.full_name
+      },
+      token,
+      message: 'Login successful'
+    });
+
+  } catch (error) {
+    console.error('Login error:', error.message);
+
+    // 🔥 IMPORTANT FIX
+    if (error.message === "GOOGLE_USER") {
+      return res.status(400).json({
+        error: "This account uses Google login. Please sign in with Google."
+      });
+    }
+
+    res.status(500).json({ error: 'Login failed' });
+  }
+}
   // Get current user
   async getCurrentUser(req, res) {
     try {

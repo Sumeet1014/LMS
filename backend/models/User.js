@@ -30,15 +30,21 @@ class User extends BaseModel {
 
   // Verify password
   async verifyPassword(email, password) {
-    const user = await this.findByEmail(email);
-    if (!user || !user.password_hash) {
-      return null;
-    }
+  const user = await this.findByEmail(email);
 
-    const isValid = await bcrypt.compare(password, user.password_hash);
-    return isValid ? user : null;
+  if (!user) return null;
+
+  
+  if (!user.password_hash) {
+    throw new Error("GOOGLE_USER");
   }
 
+  const isValid = await bcrypt.compare(password, user.password_hash);
+
+  if (!isValid) return null;
+
+  return user;
+}
   // Update password
   async updatePassword(userId, newPassword) {
     const saltRounds = 10;

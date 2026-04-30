@@ -3,17 +3,14 @@ require('dotenv').config();
 
 // Database connection pool configuration
 const poolConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'peer_pivot_learn',
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true
+  queueLimit: 0
 };
 
 // Create connection pool

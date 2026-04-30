@@ -38,7 +38,7 @@ app.use(session({
   secret: process.env.JWT_SECRET || 'session_secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false }
+ cookie: { secure: process.env.NODE_ENV === 'production' }
 }));
 
 // Passport
@@ -192,9 +192,17 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const db = require('./config/db'); 
 
+const PORT = process.env.PORT || 3001;
+
+server.listen(PORT, async () => {
+  console.log(`Server running on port ${PORT}`);
+
+  try {
+    await db.testConnection();
+  } catch (err) {
+    console.error("DB connection failed (but server still running):", err.message);
+  }
+});
 module.exports = { app, server, io };

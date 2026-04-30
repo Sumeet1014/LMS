@@ -1,9 +1,4 @@
-
--- Create database
-CREATE DATABASE IF NOT EXISTS lms_db;
-USE lms_db;
-
--- Drop tables if they exist (for clean setup)
+-- Railway Import Script (uses default 'railway' database)
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS assignment_submissions;
@@ -24,13 +19,14 @@ DROP TABLE IF EXISTS shared_resources;
 DROP TABLE IF EXISTS resources;
 DROP TABLE IF EXISTS session_requests;
 DROP TABLE IF EXISTS challenges;
+DROP TABLE IF EXISTS profile_subjects;
+DROP TABLE IF EXISTS profile_availability;
 DROP TABLE IF EXISTS profiles;
 DROP TABLE IF EXISTS subjects;
 DROP TABLE IF EXISTS users;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
--- Users table (replaces Supabase auth.users)
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -45,7 +41,6 @@ CREATE TABLE users (
     INDEX idx_role (role)
 );
 
--- Subjects table
 CREATE TABLE subjects (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -53,29 +48,6 @@ CREATE TABLE subjects (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Profile Subjects (many-to-many: profiles <-> subjects)
-CREATE TABLE profile_subjects (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    profile_id INT NOT NULL,
-    subject_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_profile_subject (profile_id, subject_id),
-    INDEX idx_profile (profile_id),
-    INDEX idx_subject (subject_id)
-);
-
--- Profile Availability slots
-CREATE TABLE profile_availability (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    profile_id INT NOT NULL,
-    day VARCHAR(20) NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_profile (profile_id)
-);
-
--- Profiles table (extended user information)
 CREATE TABLE profiles (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
@@ -88,7 +60,7 @@ CREATE TABLE profiles (
     contribution_score INT DEFAULT 0,
     total_sessions_attended INT DEFAULT 0,
     total_sessions_taught INT DEFAULT 0,
-    subjects JSON, 
+    subjects JSON,
     subject_ids JSON,
     availability JSON,
     google_refresh_token VARCHAR(255),
@@ -100,12 +72,29 @@ CREATE TABLE profiles (
     INDEX idx_user_id (user_id)
 );
 
--- Add foreign keys for profile_subjects and profile_availability (after profiles table exists)
-ALTER TABLE profile_subjects ADD CONSTRAINT fk_ps_profile FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE;
-ALTER TABLE profile_subjects ADD CONSTRAINT fk_ps_subject FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE;
-ALTER TABLE profile_availability ADD CONSTRAINT fk_pa_profile FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE;
+CREATE TABLE profile_subjects (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    profile_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_profile_subject (profile_id, subject_id),
+    INDEX idx_profile (profile_id),
+    INDEX idx_subject (subject_id),
+    CONSTRAINT fk_ps_profile FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ps_subject FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
+);
 
--- Session requests table
+CREATE TABLE profile_availability (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    profile_id INT NOT NULL,
+    day VARCHAR(20) NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_profile (profile_id),
+    CONSTRAINT fk_pa_profile FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
 CREATE TABLE session_requests (
     id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
@@ -131,7 +120,6 @@ CREATE TABLE session_requests (
     INDEX idx_requested_time (requested_time)
 );
 
--- Session feedback table
 CREATE TABLE session_feedback (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT NOT NULL,
@@ -150,7 +138,6 @@ CREATE TABLE session_feedback (
     INDEX idx_mentor_feedback (mentor_id)
 );
 
--- Video chat messages table
 CREATE TABLE video_chat_messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
     room_id VARCHAR(255) NOT NULL,
@@ -163,7 +150,6 @@ CREATE TABLE video_chat_messages (
     INDEX idx_created_at (created_at)
 );
 
--- Whiteboard strokes table
 CREATE TABLE whiteboard_strokes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     room_id VARCHAR(255) NOT NULL,
@@ -174,13 +160,12 @@ CREATE TABLE whiteboard_strokes (
     INDEX idx_room (room_id)
 );
 
--- Challenges/Quizzes table
 CREATE TABLE challenges (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     subject VARCHAR(255) NOT NULL,
     description TEXT,
-    duration INT DEFAULT 30 COMMENT 'Quiz duration in minutes',
+    duration INT DEFAULT 30,
     points_reward INT DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     start_date TIMESTAMP NULL,
@@ -190,7 +175,6 @@ CREATE TABLE challenges (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Quiz questions table
 CREATE TABLE quiz_questions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     challenge_id INT NOT NULL,
@@ -203,7 +187,6 @@ CREATE TABLE quiz_questions (
     INDEX idx_order (question_order)
 );
 
--- Quiz options table
 CREATE TABLE quiz_options (
     id INT AUTO_INCREMENT PRIMARY KEY,
     question_id INT NOT NULL,
@@ -215,7 +198,6 @@ CREATE TABLE quiz_options (
     INDEX idx_question (question_id)
 );
 
--- Quiz attempts table
 CREATE TABLE quiz_attempts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -233,7 +215,6 @@ CREATE TABLE quiz_attempts (
     INDEX idx_passed (passed)
 );
 
--- User challenge progress table
 CREATE TABLE user_challenge_progress (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -248,7 +229,6 @@ CREATE TABLE user_challenge_progress (
     INDEX idx_challenge_progress (challenge_id)
 );
 
--- Certificates table
 CREATE TABLE certificates (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -265,7 +245,6 @@ CREATE TABLE certificates (
     INDEX idx_share_token (share_token)
 );
 
--- Resources table
 CREATE TABLE resources (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -280,7 +259,6 @@ CREATE TABLE resources (
     INDEX idx_uploaded_by (uploaded_by)
 );
 
--- Shared resources table (for session sharing)
 CREATE TABLE shared_resources (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT,
@@ -298,14 +276,13 @@ CREATE TABLE shared_resources (
     INDEX idx_session_resource (session_id)
 );
 
--- Courses table (ER: USER Creates COURSE, USER Enrolls In COURSE)
-CREATE TABLE IF NOT EXISTS courses (
+CREATE TABLE courses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     domain VARCHAR(255) NOT NULL,
     description TEXT,
-    duration INT NOT NULL COMMENT 'Duration in hours',
-    created_by INT NOT NULL COMMENT 'Mentor who created the course',
+    duration INT NOT NULL,
+    created_by INT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -315,8 +292,7 @@ CREATE TABLE IF NOT EXISTS courses (
     INDEX idx_courses_active (is_active)
 );
 
--- Course enrollments table (ER: USER m:n Enrolls In COURSE)
-CREATE TABLE IF NOT EXISTS course_enrollments (
+CREATE TABLE course_enrollments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     course_id INT NOT NULL,
@@ -329,8 +305,7 @@ CREATE TABLE IF NOT EXISTS course_enrollments (
     INDEX idx_enrollment_course (course_id)
 );
 
--- Assignments table (ER: COURSE 1:n Has ASSIGNMENT)
-CREATE TABLE IF NOT EXISTS assignments (
+CREATE TABLE assignments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     course_id INT NOT NULL,
     title VARCHAR(255) NOT NULL,
@@ -344,14 +319,13 @@ CREATE TABLE IF NOT EXISTS assignments (
     INDEX idx_assignment_due_date (due_date)
 );
 
--- Assignment submissions table (ER: USER m:n Submits ASSIGNMENT)
-CREATE TABLE IF NOT EXISTS assignment_submissions (
+CREATE TABLE assignment_submissions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     assignment_id INT NOT NULL,
     user_id INT NOT NULL,
     submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     file_url VARCHAR(500),
-    pages INT COMMENT 'Number of pages submitted',
+    pages INT,
     marks_obtained INT DEFAULT NULL,
     status ENUM('submitted', 'reviewed', 'late') DEFAULT 'submitted',
     feedback TEXT,
@@ -362,7 +336,6 @@ CREATE TABLE IF NOT EXISTS assignment_submissions (
     INDEX idx_submission_user (user_id)
 );
 
--- Session messages table (for real-time chat)
 CREATE TABLE session_messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT NOT NULL,
@@ -376,7 +349,6 @@ CREATE TABLE session_messages (
     INDEX idx_created_at (created_at)
 );
 
--- AI Chats table
 CREATE TABLE ai_chats (
     id VARCHAR(36) PRIMARY KEY,
     user_id INT NOT NULL,
@@ -391,7 +363,7 @@ CREATE TABLE ai_chats (
     INDEX idx_session_chat (session_id)
 );
 
--- Insert seed data for subjects
+-- Seed Data
 INSERT INTO subjects (name, description) VALUES
 ('Data Structures & Algorithms', 'Core computer science concepts including arrays, linked lists, trees, graphs, and algorithms'),
 ('Operating Systems', 'Process management, memory management, file systems, and concurrency'),
@@ -399,7 +371,6 @@ INSERT INTO subjects (name, description) VALUES
 ('Computer Networks', 'Network protocols, OSI model, TCP/IP, and network security'),
 ('System Design', 'Scalable architecture, distributed systems, and design patterns');
 
--- Insert seed data for challenges/quizzes
 INSERT INTO challenges (id, title, subject, description, points_reward, is_active, start_date, end_date, target_value, target_metric) VALUES
 (1, 'Data Structures & Algorithms', 'DSA', 'Test your knowledge of data structures and algorithms fundamentals', 50, TRUE, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 365 DAY), 50, 'quiz_score'),
 (2, 'Operating Systems', 'Operating Systems', 'Test your knowledge of operating system concepts', 50, TRUE, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 365 DAY), 50, 'quiz_score'),
@@ -407,157 +378,56 @@ INSERT INTO challenges (id, title, subject, description, points_reward, is_activ
 (4, 'Computer Networks', 'Networks', 'Test your knowledge of networking fundamentals', 50, TRUE, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 365 DAY), 50, 'quiz_score'),
 (5, 'System Design', 'System Design', 'Test your knowledge of system design principles', 50, TRUE, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 365 DAY), 50, 'quiz_score');
 
--- DSA Questions
 INSERT INTO quiz_questions (id, challenge_id, question_text, marks, question_order) VALUES
 (1, 1, 'Which data structure gives O(1) average time for insert, delete and search?', 10, 1),
 (2, 1, 'Which traversal of a binary tree prints nodes in non-decreasing order if the tree is a BST?', 10, 2),
 (3, 1, 'What is the time complexity of Merge Sort?', 10, 3),
 (4, 1, 'What data structure is used to implement recursion?', 10, 4),
-(5, 1, 'Which algorithm finds shortest path in a weighted graph with non-negative weights?', 10, 5);
-
--- DSA Options
-INSERT INTO quiz_options (question_id, option_text, is_correct, option_order) VALUES
-(1, 'Binary Search Tree', FALSE, 1),
-(1, 'Hash Table', TRUE, 2),
-(1, 'Linked List', FALSE, 3),
-(1, 'Heap', FALSE, 4),
-(2, 'Preorder', FALSE, 1),
-(2, 'Inorder', TRUE, 2),
-(2, 'Postorder', FALSE, 3),
-(2, 'Level order', FALSE, 4),
-(3, 'O(n)', FALSE, 1),
-(3, 'O(n log n)', TRUE, 2),
-(3, 'O(n^2)', FALSE, 3),
-(3, 'O(log n)', FALSE, 4),
-(4, 'Queue', FALSE, 1),
-(4, 'Stack', TRUE, 2),
-(4, 'Heap', FALSE, 3),
-(4, 'Hash Table', FALSE, 4),
-(5, 'Bellman-Ford', FALSE, 1),
-(5, 'Dijkstra Algorithm', TRUE, 2),
-(5, 'Floyd-Warshall', FALSE, 3),
-(5, 'Prim Algorithm', FALSE, 4);
-
--- Operating Systems Questions
-INSERT INTO quiz_questions (id, challenge_id, question_text, marks, question_order) VALUES
+(5, 1, 'Which algorithm finds shortest path in a weighted graph with non-negative weights?', 10, 5),
 (6, 2, 'Which scheduling algorithm can cause starvation?', 10, 1),
 (7, 2, 'Which mechanism provides mutual exclusion for threads?', 10, 2),
 (8, 2, 'Which of these is a page replacement algorithm?', 10, 3),
 (9, 2, 'What does TLB stand for in virtual memory?', 10, 4),
-(10, 2, 'What is copy-on-write used for?', 10, 5);
-
--- Operating Systems Options
-INSERT INTO quiz_options (question_id, option_text, is_correct, option_order) VALUES
-(6, 'FCFS', FALSE, 1),
-(6, 'Round Robin', FALSE, 2),
-(6, 'Priority Scheduling', TRUE, 3),
-(6, 'Shortest Job First', FALSE, 4),
-(7, 'Semaphores', TRUE, 1),
-(7, 'Virtual Memory', FALSE, 2),
-(7, 'Page Tables', FALSE, 3),
-(7, 'File Descriptors', FALSE, 4),
-(8, 'LRU (Least Recently Used)', TRUE, 1),
-(8, 'FIFO only for queues', FALSE, 2),
-(8, 'Hashing', FALSE, 3),
-(8, 'Dijkstra', FALSE, 4),
-(9, 'Temporary Lookup Buffer', FALSE, 1),
-(9, 'Translation Lookaside Buffer', TRUE, 2),
-(9, 'Transfer Load Buffer', FALSE, 3),
-(9, 'Table Look Buffer', FALSE, 4),
-(10, 'Faster I/O', FALSE, 1),
-(10, 'Saving memory when forking processes', TRUE, 2),
-(10, 'Encrypting memory', FALSE, 3),
-(10, 'Load balancing', FALSE, 4);
-
--- Database Questions
-INSERT INTO quiz_questions (id, challenge_id, question_text, marks, question_order) VALUES
+(10, 2, 'What is copy-on-write used for?', 10, 5),
 (11, 3, 'Which normal form eliminates transitive dependencies?', 10, 1),
 (12, 3, 'Which SQL keyword removes duplicate rows from a result set?', 10, 2),
 (13, 3, 'What does ACID stand for in DB transactions?', 10, 3),
 (14, 3, 'Which index is best for range queries?', 10, 4),
-(15, 3, 'Which is a document-oriented NoSQL database?', 10, 5);
-
--- Database Options
-INSERT INTO quiz_options (question_id, option_text, is_correct, option_order) VALUES
-(11, '1NF', FALSE, 1),
-(11, '2NF', FALSE, 2),
-(11, '3NF', TRUE, 3),
-(11, 'BCNF', FALSE, 4),
-(12, 'UNIQUE', FALSE, 1),
-(12, 'DISTINCT', TRUE, 2),
-(12, 'GROUP BY', FALSE, 3),
-(12, 'HAVING', FALSE, 4),
-(13, 'Atomicity, Consistency, Isolation, Durability', TRUE, 1),
-(13, 'Atomic, Consistent, Indexed, Durable', FALSE, 2),
-(13, 'Access, Consistency, Isolation, Data', FALSE, 3),
-(13, 'Accurate, Consistent, Indexed, Durable', FALSE, 4),
-(14, 'Hash Index', FALSE, 1),
-(14, 'B-Tree Index', TRUE, 2),
-(14, 'Full-Text Index', FALSE, 3),
-(14, 'Bloom Filter', FALSE, 4),
-(15, 'Redis', FALSE, 1),
-(15, 'MongoDB', TRUE, 2),
-(15, 'Cassandra', FALSE, 3),
-(15, 'Neo4j', FALSE, 4);
-
--- Networks Questions
-INSERT INTO quiz_questions (id, challenge_id, question_text, marks, question_order) VALUES
+(15, 3, 'Which is a document-oriented NoSQL database?', 10, 5),
 (16, 4, 'Which layer of OSI handles routing?', 10, 1),
 (17, 4, 'TCP is ______ and UDP is ______', 10, 2),
 (18, 4, 'What is the standard port for HTTPS?', 10, 3),
 (19, 4, 'Which protocol resolves IP to MAC addresses?', 10, 4),
-(20, 4, 'Which device forwards packets between networks based on IP addresses?', 10, 5);
-
--- Networks Options
-INSERT INTO quiz_options (question_id, option_text, is_correct, option_order) VALUES
-(16, 'Data Link', FALSE, 1),
-(16, 'Network', TRUE, 2),
-(16, 'Transport', FALSE, 3),
-(16, 'Application', FALSE, 4),
-(17, 'connectionless, connection-oriented', FALSE, 1),
-(17, 'connection-oriented, connectionless', TRUE, 2),
-(17, 'unreliable, reliable', FALSE, 3),
-(17, 'faster, slower', FALSE, 4),
-(18, '80', FALSE, 1),
-(18, '21', FALSE, 2),
-(18, '443', TRUE, 3),
-(18, '25', FALSE, 4),
-(19, 'DNS', FALSE, 1),
-(19, 'ARP', TRUE, 2),
-(19, 'ICMP', FALSE, 3),
-(19, 'DHCP', FALSE, 4),
-(20, 'Switch', FALSE, 1),
-(20, 'Hub', FALSE, 2),
-(20, 'Router', TRUE, 3),
-(20, 'Repeater', FALSE, 4);
-
--- System Design Questions
-INSERT INTO quiz_questions (id, challenge_id, question_text, marks, question_order) VALUES
+(20, 4, 'Which device forwards packets between networks based on IP addresses?', 10, 5),
 (21, 5, 'To handle very high read traffic, which technique helps most?', 10, 1),
 (22, 5, 'What is load balancing used for?', 10, 2),
 (23, 5, 'Which DB type suits highly connected graph queries?', 10, 3),
 (24, 5, 'What is CAP theorem? You can have at most two of:', 10, 4),
 (25, 5, 'Which approach helps with scaling writes?', 10, 5);
 
--- System Design Options
 INSERT INTO quiz_options (question_id, option_text, is_correct, option_order) VALUES
-(21, 'Vertical scaling', FALSE, 1),
-(21, 'Caching (e.g., Redis)', TRUE, 2),
-(21, 'Removing indexes', FALSE, 3),
-(21, 'Using large VARCHAR', FALSE, 4),
-(22, 'Encrypting traffic', FALSE, 1),
-(22, 'Distributing incoming traffic across servers', TRUE, 2),
-(22, 'Speeding up database writes only', FALSE, 3),
-(22, 'Deleting stale sessions', FALSE, 4),
-(23, 'Relational DB', FALSE, 1),
-(23, 'Columnar DB', FALSE, 2),
-(23, 'Graph DB (e.g., Neo4j)', TRUE, 3),
-(23, 'Key-Value store', FALSE, 4),
-(24, 'Consistency, Availability, Partition tolerance', TRUE, 1),
-(24, 'Caching, Availability, Performance', FALSE, 2),
-(24, 'Centralization, Availability, Partitioning', FALSE, 3),
-(24, 'Cost, Availability, Performance', FALSE, 4),
-(25, 'Read replicas', FALSE, 1),
-(25, 'Sharding', TRUE, 2),
-(25, 'Client side caching', FALSE, 3),
-(25, 'CDN only', FALSE, 4);
+(1, 'Binary Search Tree', FALSE, 1),(1, 'Hash Table', TRUE, 2),(1, 'Linked List', FALSE, 3),(1, 'Heap', FALSE, 4),
+(2, 'Preorder', FALSE, 1),(2, 'Inorder', TRUE, 2),(2, 'Postorder', FALSE, 3),(2, 'Level order', FALSE, 4),
+(3, 'O(n)', FALSE, 1),(3, 'O(n log n)', TRUE, 2),(3, 'O(n^2)', FALSE, 3),(3, 'O(log n)', FALSE, 4),
+(4, 'Queue', FALSE, 1),(4, 'Stack', TRUE, 2),(4, 'Heap', FALSE, 3),(4, 'Hash Table', FALSE, 4),
+(5, 'Bellman-Ford', FALSE, 1),(5, 'Dijkstra Algorithm', TRUE, 2),(5, 'Floyd-Warshall', FALSE, 3),(5, 'Prim Algorithm', FALSE, 4),
+(6, 'FCFS', FALSE, 1),(6, 'Round Robin', FALSE, 2),(6, 'Priority Scheduling', TRUE, 3),(6, 'Shortest Job First', FALSE, 4),
+(7, 'Semaphores', TRUE, 1),(7, 'Virtual Memory', FALSE, 2),(7, 'Page Tables', FALSE, 3),(7, 'File Descriptors', FALSE, 4),
+(8, 'LRU (Least Recently Used)', TRUE, 1),(8, 'FIFO only for queues', FALSE, 2),(8, 'Hashing', FALSE, 3),(8, 'Dijkstra', FALSE, 4),
+(9, 'Temporary Lookup Buffer', FALSE, 1),(9, 'Translation Lookaside Buffer', TRUE, 2),(9, 'Transfer Load Buffer', FALSE, 3),(9, 'Table Look Buffer', FALSE, 4),
+(10, 'Faster I/O', FALSE, 1),(10, 'Saving memory when forking processes', TRUE, 2),(10, 'Encrypting memory', FALSE, 3),(10, 'Load balancing', FALSE, 4),
+(11, '1NF', FALSE, 1),(11, '2NF', FALSE, 2),(11, '3NF', TRUE, 3),(11, 'BCNF', FALSE, 4),
+(12, 'UNIQUE', FALSE, 1),(12, 'DISTINCT', TRUE, 2),(12, 'GROUP BY', FALSE, 3),(12, 'HAVING', FALSE, 4),
+(13, 'Atomicity, Consistency, Isolation, Durability', TRUE, 1),(13, 'Atomic, Consistent, Indexed, Durable', FALSE, 2),(13, 'Access, Consistency, Isolation, Data', FALSE, 3),(13, 'Accurate, Consistent, Indexed, Durable', FALSE, 4),
+(14, 'Hash Index', FALSE, 1),(14, 'B-Tree Index', TRUE, 2),(14, 'Full-Text Index', FALSE, 3),(14, 'Bloom Filter', FALSE, 4),
+(15, 'Redis', FALSE, 1),(15, 'MongoDB', TRUE, 2),(15, 'Cassandra', FALSE, 3),(15, 'Neo4j', FALSE, 4),
+(16, 'Data Link', FALSE, 1),(16, 'Network', TRUE, 2),(16, 'Transport', FALSE, 3),(16, 'Application', FALSE, 4),
+(17, 'connectionless, connection-oriented', FALSE, 1),(17, 'connection-oriented, connectionless', TRUE, 2),(17, 'unreliable, reliable', FALSE, 3),(17, 'faster, slower', FALSE, 4),
+(18, '80', FALSE, 1),(18, '21', FALSE, 2),(18, '443', TRUE, 3),(18, '25', FALSE, 4),
+(19, 'DNS', FALSE, 1),(19, 'ARP', TRUE, 2),(19, 'ICMP', FALSE, 3),(19, 'DHCP', FALSE, 4),
+(20, 'Switch', FALSE, 1),(20, 'Hub', FALSE, 2),(20, 'Router', TRUE, 3),(20, 'Repeater', FALSE, 4),
+(21, 'Vertical scaling', FALSE, 1),(21, 'Caching (e.g., Redis)', TRUE, 2),(21, 'Removing indexes', FALSE, 3),(21, 'Using large VARCHAR', FALSE, 4),
+(22, 'Encrypting traffic', FALSE, 1),(22, 'Distributing incoming traffic across servers', TRUE, 2),(22, 'Speeding up database writes only', FALSE, 3),(22, 'Deleting stale sessions', FALSE, 4),
+(23, 'Relational DB', FALSE, 1),(23, 'Columnar DB', FALSE, 2),(23, 'Graph DB (e.g., Neo4j)', TRUE, 3),(23, 'Key-Value store', FALSE, 4),
+(24, 'Consistency, Availability, Partition tolerance', TRUE, 1),(24, 'Caching, Availability, Performance', FALSE, 2),(24, 'Centralization, Availability, Partitioning', FALSE, 3),(24, 'Cost, Availability, Performance', FALSE, 4),
+(25, 'Read replicas', FALSE, 1),(25, 'Sharding', TRUE, 2),(25, 'Client side caching', FALSE, 3),(25, 'CDN only', FALSE, 4);
