@@ -25,8 +25,13 @@ class Profile extends BaseModel {
 
   // Update profile by user_id
   async updateByUserId(userId, profileData) {
-    const query = 'UPDATE profiles SET ? WHERE user_id = ?';
-    return await this.query(query, [profileData, userId]);
+    const keys = Object.keys(profileData);
+    if (keys.length === 0) return null;
+    const values = Object.values(profileData);
+    const setClause = keys.map(key => `${key} = ?`).join(', ');
+    const query = `UPDATE profiles SET ${setClause} WHERE user_id = ?`;
+    await this.query(query, [...values, userId]);
+    return await this.getByUserId(userId);
   }
 
   // Get profile by user_id
